@@ -1,0 +1,1 @@
+objdump -D -b binary -mi386:x86-64 -Mintel random_math.bin > random_math.bin.txt
