@@ -39,3 +39,11 @@ ASIC will have to implement some simple and minimalistic instruction decoder and
 
 ASIC with external memory will have the same performance as they did on CryptonightV2, but they will require much more chip area to implement multiple CPU-like execution pipelines.
 ASIC with on-chip memory will get 3-4.5 times slower due to increased math latency and randomness and they will also require more chip area.
+
+### Further development plans
+
+- Reference implementation in Monero's code base (`slow-hash.c`, dependent files and tests): December 9th, 2018
+- Optimized CPU miner (xmrig): December 15th, 2018
+- Optimized GPU miner (xmrig-amd): December 20th, 2018
+- Pool software: December 24th, 2018
+- Public testing: Janurary 2019
