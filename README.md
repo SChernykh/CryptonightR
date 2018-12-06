@@ -46,4 +46,4 @@ ASIC with on-chip memory will get 3-4.5 times slower due to increased math laten
 - Optimized CPU miner (xmrig): December 15th, 2018
 - Optimized GPU miner (xmrig-amd): December 20th, 2018
 - Pool software: December 24th, 2018
-- Public testing: Janurary 2019
+- Public testing: January 2019
