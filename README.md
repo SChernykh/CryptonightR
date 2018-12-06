@@ -19,7 +19,7 @@ There are 8 registers named R0-R7. Registers R0-R3 are variable, registers R4-R7
 
 All registers are 32 bit to enable efficient GPU implementation.
 
-The random sequence changes every block. It depends either on block height or previous block hash (TBD).
+The random sequence changes every block. Block height is used as a seed for random number generator. This allows CPU/GPU miners to precompile optimized code for each block. It also allows to verify optimized code for all future blocks against reference implementation, so it'll be guaranteed safe to use in monero daemon/wallet software.
 
 ### Design choices
 
