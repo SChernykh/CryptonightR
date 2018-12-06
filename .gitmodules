@@ -1,0 +1,4 @@
+[submodule "slow_hash_test"]
+	path = slow_hash_test
+	url = https://github.com/SChernykh/slow_hash_test.git
+	branch = CryptonightR
