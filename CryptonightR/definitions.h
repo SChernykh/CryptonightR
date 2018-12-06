@@ -1,47 +1,14 @@
 #pragma once
 
 #include <stdint.h>
+#include <memory.h>
 
-enum EInstructionList
-{
-	// MUL has 3 times higher frequency
-	MUL1,	// a*b
-	MUL2,	// a*b
-	MUL3,	// a*b
-	ADD,	// a+b + C, -128 <= C <= 127
-	SUB,	// a-b
-	ROR,	// rotate right "a" by "b & 31" bits
-	ROL,	// rotate left "a" by "b & 31" bits
-	XOR,	// a^b
-};
+extern "C" void hash_extra_blake(const void *data, size_t length, char *hash);
 
-// There are 8 total registers:
-// - 4 variable registers
-// - 4 constant registers initialized from loop variables
-//
-// This is why dst_index is 2 bits
-struct SInstruction
-{
-	uint8_t opcode : 3;
-	uint8_t dst_index : 2;
-	uint8_t src_index : 3;
-};
-static_assert(sizeof(SInstruction) == 1, "Instruction size must be 1 byte");
+#include "../slow_hash_test/variant4_random_math.h"
 
 constexpr uint32_t RND_SEED = 123;
 constexpr uint32_t BENCHMARK_DURATION = 5; // seconds
-
-// Generate code with latency = 54 cycles, which is equivalent to 18 multiplications
-constexpr uint32_t TOTAL_LATENCY = 18 * 3;
-
-// Available ALU count for latency calculation
-constexpr int ALU_COUNT = 2;
-
-// Registers to use in generated x86-64 code
-static const char* reg[8] = {
-	"ebx", "esi", "edi", "ebp",
-	"esp", "r15d", "eax", "edx"
-};
 
 #define MEMORY 2097152
 
@@ -79,4 +46,4 @@ static inline uint64_t __umul128(uint64_t a, uint64_t b, uint64_t* hi)
 #endif // __GNUC__
 
 // If you changed RND_SEED, set it to 1 to update random_math.inc, random_math.inl, random_math.bin
-#define DUMP_CODE 0
+#define DUMP_SOURCE_CODE 0

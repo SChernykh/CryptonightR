@@ -83,6 +83,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\slow_hash_test\blake256.c" />
+    <ClCompile Include="..\slow_hash_test\hash-extra-blake.c" />
     <ClCompile Include="CryptonightR_gen.cpp">
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AssemblyCode</AssemblerOutput>
     </ClCompile>

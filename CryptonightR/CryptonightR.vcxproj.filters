@@ -5,6 +5,9 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Source Files\blake">
+      <UniqueIdentifier>{9e2c2382-1901-4106-b7e9-e02b9640cc3b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CryptonightR_test.cpp">
@@ -12,6 +15,12 @@
     </ClCompile>
     <ClCompile Include="CryptonightR_gen.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\slow_hash_test\blake256.c">
+      <Filter>Source Files\blake</Filter>
+    </ClCompile>
+    <ClCompile Include="..\slow_hash_test\hash-extra-blake.c">
+      <Filter>Source Files\blake</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

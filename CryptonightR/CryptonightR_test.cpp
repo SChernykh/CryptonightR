@@ -6,7 +6,7 @@
 
 // CryptonightR reference implementation
 // It's basically CryptonightV2 with random math instead of div+sqrt
-void CryptonightR_ref(cryptonight_ctx* ctx0, uint8_t* code, int code_size)
+void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code, int code_size)
 {
 	uint8_t* l0 = ctx0->long_state;
 	uint64_t* h0 = (uint64_t*)ctx0->hash_state;
@@ -65,39 +65,7 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, uint8_t* code, int code_size)
 			r[6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx0));
 			r[7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx1));
 
-			for (int i = 0; i < code_size; ++i)
-			{
-				const SInstruction& inst = reinterpret_cast<const SInstruction*>(code)[i];
-				uint32_t& dst = r[inst.dst_index];
-
-				switch (inst.opcode)
-				{
-				case MUL1:
-				case MUL2:
-				case MUL3:
-					dst *= r[inst.src_index];
-					break;
-				case ADD:
-					// 3-way addition: a = a + b + C where C is next code byte (signed)
-					++i;
-					dst += r[inst.src_index] + reinterpret_cast<const int8_t*>(code)[i];
-					break;
-				case SUB:
-					// Make sure we don't subtract register from itself
-					dst -= r[inst.src_index + ((inst.dst_index == inst.src_index) ? 4 : 0)];
-					break;
-				case ROR:
-					dst = _rotr(dst, r[inst.src_index]);
-					break;
-				case ROL:
-					dst = _rotl(dst, r[inst.src_index]);
-					break;
-				case XOR:
-					// Make sure we don't XOR register with itself
-					dst ^= r[inst.src_index + ((inst.dst_index == inst.src_index) ? 4 : 0)];
-					break;
-				}
-			}
+			v4_random_math(code, code_size, r);
 		}
 
 		lo = _umul128(idx0, cl, &hi);
@@ -263,7 +231,7 @@ typedef void(*mainloop_func)(cryptonight_ctx*);
 extern "C" void CryptonightR_asm(cryptonight_ctx* ctx0);
 extern "C" void cnv2_mainloop_ivybridge_asm(cryptonight_ctx* ctx0);
 extern "C" void cnv2_mainloop_ryzen_asm(cryptonight_ctx* ctx0);
-extern void generate_code(std::mt19937& rnd, uint8_t* code, int& num_instructions, int& code_size, std::vector<uint8_t>& machine_code);
+extern void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t>& machine_code);
 
 static double get_rdtsc_speed()
 {
@@ -321,14 +289,10 @@ int CryptonightR_test()
 	cryptonight_ctx* ctx2 = cryptonight_alloc_ctx();
 	cryptonight_ctx* ctx3 = cryptonight_alloc_ctx();
 
-	std::mt19937 rnd;
-	rnd.seed(RND_SEED);
-
-	uint8_t code[1024];
-	int num_instructions;
-	int code_size;
+	V4_Instruction code[1024];
+	int code_size = v4_random_math_init(code, RND_SEED);
 	std::vector<uint8_t> machine_code;
-	generate_code(rnd, code, num_instructions, code_size, machine_code);
+	compile_code(code, code_size, machine_code);
 
 	mainloop_func CryptonightR_generated = (mainloop_func) VirtualAlloc(0, 4096, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	memcpy(CryptonightR_generated, machine_code.data(), machine_code.size());
@@ -386,8 +350,8 @@ int CryptonightR_test()
 	// Test 1000 random code sequences and compare them with reference code
 	for (int i = 1; i <= 1000; ++i)
 	{
-		rnd.seed(i);
-		generate_code(rnd, code, num_instructions, code_size, machine_code);
+		code_size = v4_random_math_init(code, i);
+		compile_code(code, code_size, machine_code);
 		memcpy(CryptonightR_generated, machine_code.data(), machine_code.size());
 		FlushInstructionCache(GetCurrentProcess(), CryptonightR_generated, machine_code.size());
 

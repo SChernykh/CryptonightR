@@ -1,258 +1,127 @@
 #include <stdlib.h>
 #include <stdint.h>
-#include <random>
 #include <chrono>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <vector>
 #include "definitions.h"
 
 #include "CryptonightR_template.h"
 
-void generate_code(std::mt19937& rnd, uint8_t* code, int& num_instructions, int& code_size, std::vector<uint8_t>& machine_code)
+// Registers to use in generated x86-64 code
+static const char* reg[8] = {
+	"ebx", "esi", "edi", "ebp",
+	"esp", "r15d", "eax", "edx"
+};
+
+void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t>& machine_code)
 {
 	machine_code.clear();
 	machine_code.insert(machine_code.end(), (const uint8_t*) CryptonightR_template_part1, (const uint8_t*) CryptonightR_template_part2);
 
-#if DUMP_CODE
+#if DUMP_SOURCE_CODE
 #define DUMP(x, ...) x << __VA_ARGS__
 
 	std::ofstream f("random_math.inl");
 	std::ofstream f_asm("random_math.inc");
-	f << "// Auto-generated file, do not edit\n\n";
-	f_asm << "; Auto-generated file, do not edit\n\n";
-	f << "FORCEINLINE void random_math(uint32_t& r0, uint32_t& r1, uint32_t& r2, uint32_t& r3, const uint32_t r4, const uint32_t r5, const uint32_t r6, const uint32_t r7)\n";
-	f << "{\n";
-	f << "\t// Comments below show latency for each register on an abstract CPU:\n";
-	f << "\t// - Superscalar, out-of-order execution, fully pipelined\n";
-	f << "\t// - Two integer ALUs\n";
-	f << "\t// - ALU0 can do all operations\n";
-	f << "\t// - ALU1 can only do 1-cycle operations\n";
-	f << "\t// - Latency for MUL is 3 cycles, throughput is 1 MUL/cycle\n";
-	f << "\t// - Latency for all other operation is 1 cycle\n\n";
+	DUMP(f, "// Auto-generated file, do not edit\n\n";
+	DUMP(f_asm, "; Auto-generated file, do not edit\n\n";
+	DUMP(f, "FORCEINLINE void random_math(uint32_t& r0, uint32_t& r1, uint32_t& r2, uint32_t& r3, const uint32_t r4, const uint32_t r5, const uint32_t r6, const uint32_t r7)\n";
+	DUMP(f, "{\n";
 #else
 #define DUMP(x, ...)
 #endif
 
-	uint32_t latency[8] = {};
-	uint32_t min_possible_latency[8] = {};
-	num_instructions = 0;
-	code_size = 0;
-
-	bool alu_busy[TOTAL_LATENCY][ALU_COUNT] = {};
-
-	auto all_alu_busy = [&alu_busy](int latency)
-	{
-		for (int i = 0; i < ALU_COUNT; ++i)
-		{
-			if (!alu_busy[latency][i])
-			{
-				return false;
-			}
-		}
-		return true;
-	};
-
-	auto use_alu = [&alu_busy](int latency)
-	{
-		for (int i = ALU_COUNT - 1; i >= 0; --i)
-		{
-			if (!alu_busy[latency][i])
-			{
-				alu_busy[latency][i] = true;
-				return;
-			}
-		}
-	};
-
 	uint32_t prev_rot_src = (uint32_t)(-1);
 
-	int num_retries = 0;
-
-	do
+	for (int i = 0; i < code_size; ++i)
 	{
-		uint32_t next_latency;
-
-		uint8_t data[4];
-		*((uint32_t*)data) = rnd();
-		const SInstruction inst = reinterpret_cast<SInstruction*>(data)[0];
+		const V4_Instruction inst = code[i];
 
 		const uint32_t a = inst.dst_index;
 		const uint32_t b = inst.src_index;
-		const int prev_code_size = code_size;
 
 		switch (inst.opcode)
 		{
 		case MUL1:
 		case MUL2:
 		case MUL3:
-			next_latency = std::max(latency[a], latency[b]);
-			while ((next_latency < TOTAL_LATENCY) && alu_busy[next_latency][0])
-			{
-				++next_latency;
-			}
-			next_latency += 3;
-
-			if (next_latency <= TOTAL_LATENCY)
-			{
-				DUMP(f, "\tr" << a << " *= " << 'r' << b << ";\t");
-				DUMP(f_asm, "\timul\t" << reg[a] << ", " << reg[b]);
-				min_possible_latency[a] = std::max(min_possible_latency[a], min_possible_latency[b]) + 3;
-				alu_busy[next_latency - 3][0] = true;
-				latency[a] = next_latency;
-				code[code_size++] = data[0];
-			}
+			DUMP(f, "\tr" << a << " *= " << 'r' << b << ";\t");
+			DUMP(f_asm, "\timul\t" << reg[a] << ", " << reg[b]);
 			break;
 
 		case ADD:
-			next_latency = std::max(latency[a], latency[b]);
-			while ((next_latency < TOTAL_LATENCY) && all_alu_busy(next_latency))
 			{
-				++next_latency;
-			}
-			next_latency += 1;
-
-			if (next_latency <= TOTAL_LATENCY)
-			{
-				int c = reinterpret_cast<const int8_t*>(data)[1];
+				int c = reinterpret_cast<const int8_t*>(code)[i + 1];
 
 				DUMP(f, "\tr" << a << " += " << 'r' << b << ((c < 0) ? " - " : " + "));
 				DUMP(f_asm, "\tlea\t" << reg[a] << ", [" << reg[a] << "+" << reg[b] << ((c < 0) ? "-" : "+"));
 
-				min_possible_latency[a] = std::max(min_possible_latency[a], min_possible_latency[b]) + 1;
-				use_alu(next_latency - 1);
-				latency[a] = next_latency;
 				if (c < 0)
-				{
 					c = -c;
-				}
+
 				DUMP(f, c << ";\t");
 				DUMP(f_asm, c << "]");
-				code[code_size++] = data[0];
-				code[code_size++] = data[1];
 			}
 			break;
 
 		case SUB:
-			next_latency = std::max(latency[a], latency[(a != b) ? b : (b + 4)]);
-			while ((next_latency < TOTAL_LATENCY) && all_alu_busy(next_latency))
-			{
-				++next_latency;
-			}
-			next_latency += 1;
-
-			if (next_latency <= TOTAL_LATENCY)
-			{
-				DUMP(f, "\tr" << a << " -= " << 'r' << ((a != b) ? b : (b + 4)) << ";\t");
-				DUMP(f_asm, "\tsub\t" << reg[a] << ", " << reg[((a != b) ? b : (b + 4))]);
-				min_possible_latency[a] = std::max(min_possible_latency[a], min_possible_latency[(a != b) ? b : (b + 4)]) + 1;
-				use_alu(next_latency - 1);
-				latency[a] = next_latency;
-				code[code_size++] = data[0];
-			}
+			DUMP(f, "\tr" << a << " -= " << 'r' << b << ";\t");
+			DUMP(f_asm, "\tsub\t" << reg[a] << ", " << reg[b]);
 			break;
 
 		case ROR:
-			next_latency = std::max(latency[a], latency[b]);
-			while ((next_latency < TOTAL_LATENCY) && all_alu_busy(next_latency))
+			DUMP(f, "\tr" << a << " = _rotr(r" << a << ", r" << b << ");");
+			if (b != prev_rot_src)
 			{
-				++next_latency;
-			}
-			next_latency += 1;
+				DUMP(f_asm, "\tmov\tecx, " << reg[b] << "\n");
+				prev_rot_src = b;
 
-			if (next_latency <= TOTAL_LATENCY)
-			{
-				DUMP(f, "\tr" << a << " = _rotr(r" << a << ", r" << b << ");");
-				if (b != prev_rot_src)
-				{
-					DUMP(f_asm, "\tmov\tecx, " << reg[b] << "\n");
-					prev_rot_src = b;
-
-					const uint8_t* p1 = (const uint8_t*)instructions_mov[data[0]];
-					const uint8_t* p2 = (const uint8_t*)instructions_mov[data[0] + 1];
-					machine_code.insert(machine_code.end(), p1, p2);
-				}
-				DUMP(f_asm, "\tror\t" << reg[a] << ", cl");
-				min_possible_latency[a] = std::max(min_possible_latency[a], min_possible_latency[b]) + 1;
-				use_alu(next_latency - 1);
-				latency[a] = next_latency;
-				code[code_size++] = data[0];
+				const uint8_t* p1 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i]];
+				const uint8_t* p2 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i] + 1];
+				machine_code.insert(machine_code.end(), p1, p2);
 			}
+			DUMP(f_asm, "\tror\t" << reg[a] << ", cl");
 			break;
 
 		case ROL:
-			next_latency = std::max(latency[a], latency[b]);
-			while ((next_latency < TOTAL_LATENCY) && all_alu_busy(next_latency))
+			DUMP(f, "\tr" << a << " = _rotl(r" << a << ", r" << b << ");");
+			if (b != prev_rot_src)
 			{
-				++next_latency;
-			}
-			next_latency += 1;
+				DUMP(f_asm, "\tmov\tecx, " << reg[b] << "\n");
+				prev_rot_src = b;
 
-			if (next_latency <= TOTAL_LATENCY)
-			{
-				DUMP(f, "\tr" << a << " = _rotl(r" << a << ", r" << b << ");");
-				if (b != prev_rot_src)
-				{
-					DUMP(f_asm, "\tmov\tecx, " << reg[b] << "\n");
-					prev_rot_src = b;
-
-					const uint8_t* p1 = (const uint8_t*)instructions_mov[data[0]];
-					const uint8_t* p2 = (const uint8_t*)instructions_mov[data[0] + 1];
-					machine_code.insert(machine_code.end(), p1, p2);
-				}
-				DUMP(f_asm, "\trol\t" << reg[a] << ", cl");
-				min_possible_latency[a] = std::max(min_possible_latency[a], min_possible_latency[b]) + 1;
-				use_alu(next_latency - 1);
-				latency[a] = next_latency;
-				code[code_size++] = data[0];
+				const uint8_t* p1 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i]];
+				const uint8_t* p2 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i] + 1];
+				machine_code.insert(machine_code.end(), p1, p2);
 			}
+			DUMP(f_asm, "\trol\t" << reg[a] << ", cl");
 			break;
 
 		case XOR:
-			next_latency = std::max(latency[a], latency[(a != b) ? b : (b + 4)]);
-			while ((next_latency < TOTAL_LATENCY) && all_alu_busy(next_latency))
-			{
-				++next_latency;
-			}
-			next_latency += 1;
-
-			if (next_latency <= TOTAL_LATENCY)
-			{
-				DUMP(f, "\tr" << a << " ^= " << 'r' << ((a != b) ? b : (b + 4)) << ";\t");
-				DUMP(f_asm, "\txor\t" << reg[a] << ", " << reg[((a != b) ? b : (b + 4))]);
-				min_possible_latency[a] = std::max(min_possible_latency[a], min_possible_latency[(a != b) ? b : (b + 4)]) + 1;
-				use_alu(next_latency - 1);
-				latency[a] = next_latency;
-				code[code_size++] = data[0];
-			}
+			DUMP(f, "\tr" << a << " ^= " << 'r' << b << ";\t");
+			DUMP(f_asm, "\txor\t" << reg[a] << ", " << reg[b]);
 			break;
 		}
 
-		if (prev_code_size != code_size)
-		{
-			DUMP(f, "\t\t// " << latency[0] << ", " << latency[1] << ", " << latency[2] << ", " << latency[3] << "\n");
-			DUMP(f_asm, "\n");
-			++num_instructions;
+		DUMP(f, "\n");
+		DUMP(f_asm, "\n");
 
-			if (a == prev_rot_src)
-			{
-				prev_rot_src = (uint32_t)(-1);
-			}
-
-			const uint8_t* p1 = (const uint8_t*) instructions[data[0]];
-			const uint8_t* p2 = (const uint8_t*) instructions[data[0] + 1];
-			machine_code.insert(machine_code.end(), p1, p2);
-			if (inst.opcode == ADD)
-			{
-				machine_code.back() = data[1];
-			}
-		}
-		else
+		if (a == prev_rot_src)
 		{
-			++num_retries;
+			prev_rot_src = (uint32_t)(-1);
 		}
-	} while (((latency[0] < TOTAL_LATENCY) || (latency[1] < TOTAL_LATENCY) || (latency[2] < TOTAL_LATENCY) || (latency[3] < TOTAL_LATENCY)) && (num_retries < 64));
-	DUMP(f, "\n");
+
+		const uint8_t* p1 = (const uint8_t*)instructions[((uint8_t*)code)[i]];
+		const uint8_t* p2 = (const uint8_t*)instructions[((uint8_t*)code)[i] + 1];
+		machine_code.insert(machine_code.end(), p1, p2);
+		if (inst.opcode == ADD)
+		{
+			++i;
+			machine_code.back() = ((uint8_t*)code)[i];
+		}
+	}
 
 	machine_code.insert(machine_code.end(), (const uint8_t*) CryptonightR_template_part2, (const uint8_t*) CryptonightR_template_part3);
 
@@ -260,9 +129,7 @@ void generate_code(std::mt19937& rnd, uint8_t* code, int& num_instructions, int&
 
 	machine_code.insert(machine_code.end(), (const uint8_t*) CryptonightR_template_part3, (const uint8_t*) CryptonightR_instruction0);
 
-#if DUMP_CODE
-	f << "\t// Theoretical minimal latency: " << min_possible_latency[0] << ", " << min_possible_latency[1] << ", " << min_possible_latency[2] << ", " << min_possible_latency[3] << "\n";
-	f << "\t// Total instructions: " << num_instructions << "\n";
+#if DUMP_SOURCE_CODE
 	f << "}\n";
 	f.close();
 	f_asm.close();
@@ -482,7 +349,7 @@ CryptonightR_template_part3:
 	for (int i = 0; i <= 256; ++i)
 	{
 		f_asm << "CryptonightR_instruction" << i << ":\n";
-		const SInstruction inst = reinterpret_cast<SInstruction*>(&i)[0];
+		const V4_Instruction inst = reinterpret_cast<V4_Instruction*>(&i)[0];
 
 		const uint32_t a = inst.dst_index;
 		const uint32_t b = inst.src_index;
@@ -500,7 +367,7 @@ CryptonightR_template_part3:
 			break;
 
 		case SUB:
-			f_asm << "\tsub\t" << reg[a] << ", " << reg[((a != b) ? b : (b + 4))];
+			f_asm << "\tsub\t" << reg[a] << ", " << reg[b];
 			break;
 
 		case ROR:
@@ -512,7 +379,7 @@ CryptonightR_template_part3:
 			break;
 
 		case XOR:
-			f_asm << "\txor\t" << reg[a] << ", " << reg[((a != b) ? b : (b + 4))];
+			f_asm << "\txor\t" << reg[a] << ", " << reg[b];
 			break;
 		}
 		f_asm << "\n";
@@ -521,7 +388,7 @@ CryptonightR_template_part3:
 	for (int i = 0; i <= 256; ++i)
 	{
 		f_asm << "CryptonightR_instruction_mov" << i << ":\n";
-		const SInstruction inst = reinterpret_cast<SInstruction*>(&i)[0];
+		const V4_Instruction inst = reinterpret_cast<V4_Instruction*>(&i)[0];
 
 		const uint32_t b = inst.src_index;
 
@@ -547,17 +414,14 @@ extern int CryptonightR_test();
 int main()
 {
 	// Only needs to be done if VM instructions list, encoding or semantics change
-	//generate_asm_template();
+	generate_asm_template();
 
-#if DUMP_CODE
-	std::mt19937 rnd;
-	rnd.seed(RND_SEED);
+#if DUMP_SOURCE_CODE
+	V4_Instruction code[256];
+	int code_size = v4_random_math_init(code, RND_SEED);
 
-	uint8_t code[1024];
-	int num_instructions;
-	int code_size;
 	std::vector<uint8_t> machine_code;
-	generate_code(rnd, code, num_instructions, code_size, machine_code);
+	compile_code(code, code_size, machine_code);
 #endif
 
 	return CryptonightR_test();

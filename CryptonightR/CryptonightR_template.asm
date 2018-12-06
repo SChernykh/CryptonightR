@@ -679,13 +679,13 @@ CryptonightR_instruction2:
 CryptonightR_instruction3:
 	lea	ebx, [ebx+ebx+1]
 CryptonightR_instruction4:
-	sub	ebx, esp
+	sub	ebx, ebx
 CryptonightR_instruction5:
 	ror	ebx, cl
 CryptonightR_instruction6:
 	rol	ebx, cl
 CryptonightR_instruction7:
-	xor	ebx, esp
+	xor	ebx, ebx
 CryptonightR_instruction8:
 	imul	esi, ebx
 CryptonightR_instruction9:
@@ -759,13 +759,13 @@ CryptonightR_instruction42:
 CryptonightR_instruction43:
 	lea	esi, [esi+esi+1]
 CryptonightR_instruction44:
-	sub	esi, r15d
+	sub	esi, esi
 CryptonightR_instruction45:
 	ror	esi, cl
 CryptonightR_instruction46:
 	rol	esi, cl
 CryptonightR_instruction47:
-	xor	esi, r15d
+	xor	esi, esi
 CryptonightR_instruction48:
 	imul	edi, esi
 CryptonightR_instruction49:
@@ -839,13 +839,13 @@ CryptonightR_instruction82:
 CryptonightR_instruction83:
 	lea	edi, [edi+edi+1]
 CryptonightR_instruction84:
-	sub	edi, eax
+	sub	edi, edi
 CryptonightR_instruction85:
 	ror	edi, cl
 CryptonightR_instruction86:
 	rol	edi, cl
 CryptonightR_instruction87:
-	xor	edi, eax
+	xor	edi, edi
 CryptonightR_instruction88:
 	imul	ebp, edi
 CryptonightR_instruction89:
@@ -919,13 +919,13 @@ CryptonightR_instruction122:
 CryptonightR_instruction123:
 	lea	ebp, [ebp+ebp+1]
 CryptonightR_instruction124:
-	sub	ebp, edx
+	sub	ebp, ebp
 CryptonightR_instruction125:
 	ror	ebp, cl
 CryptonightR_instruction126:
 	rol	ebp, cl
 CryptonightR_instruction127:
-	xor	ebp, edx
+	xor	ebp, ebp
 CryptonightR_instruction128:
 	imul	ebx, esp
 CryptonightR_instruction129:
