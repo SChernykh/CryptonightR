@@ -414,7 +414,7 @@ extern int CryptonightR_test();
 int main()
 {
 	// Only needs to be done if VM instructions list, encoding or semantics change
-	generate_asm_template();
+	//generate_asm_template();
 
 #if DUMP_SOURCE_CODE
 	V4_Instruction code[256];
