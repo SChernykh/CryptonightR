@@ -25,6 +25,8 @@ Reference implementation (variant4 code in the following files):
 - https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/variant4_random_math.h
 - https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/slow-hash.c
 
+Optimized implementation including x86-64 machine code generator is available in this repository.
+
 ### Design choices
 
 Instruction set is chosen from instructions that are efficient on CPUs/GPUs compared to ASIC: all of them except XOR are complex operations at logic circuit level and require O(logN) gate delay. These operations have been studied extensively for decades and modern CPUs/GPUs already have the best implementations.
