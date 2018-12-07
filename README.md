@@ -21,6 +21,10 @@ All registers are 32 bit to enable efficient GPU implementation.
 
 The random sequence changes every block. Block height is used as a seed for random number generator. This allows CPU/GPU miners to precompile optimized code for each block. It also allows to verify optimized code for all future blocks against reference implementation, so it'll be guaranteed safe to use in monero daemon/wallet software.
 
+Reference implementation (variant4 code in the following files):
+- https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/variant4_random_math.h
+- https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/slow-hash.c
+
 ### Design choices
 
 Instruction set is chosen from instructions that are efficient on CPUs/GPUs compared to ASIC: all of them except XOR are complex operations at logic circuit level and require O(logN) gate delay. These operations have been studied extensively for decades and modern CPUs/GPUs already have the best implementations.
