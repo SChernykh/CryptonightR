@@ -1,12 +1,16 @@
-_TEXT_CN_MAINLOOP SEGMENT PAGE READ EXECUTE
-PUBLIC CryptonightR_asm
-PUBLIC CryptonightR_double_asm
+PUBLIC CryptonightR_template_part1
+PUBLIC CryptonightR_template_mainloop
+PUBLIC CryptonightR_template_part2
+PUBLIC CryptonightR_template_part3
+PUBLIC CryptonightR_template_end
+PUBLIC CryptonightR_template_double_part1
+PUBLIC CryptonightR_template_double_mainloop
+PUBLIC CryptonightR_template_double_part2
+PUBLIC CryptonightR_template_double_part3
+PUBLIC CryptonightR_template_double_part4
+PUBLIC CryptonightR_template_double_end
 
-; CryptonightR assembler code
-; Doesn't spill registers on stack unlike compiler generated code
-
-ALIGN 64
-CryptonightR_asm PROC
+CryptonightR_template_part1:
 	mov	QWORD PTR [rsp+16], rbx
 	mov	QWORD PTR [rsp+24], rbp
 	mov	QWORD PTR [rsp+32], rsi
@@ -56,7 +60,7 @@ CryptonightR_asm PROC
 	mov	ebp, [rdx+108]
 
 	ALIGN 64
-main_loop:
+CryptonightR_template_mainloop:
 	movdqa	xmm5, XMMWORD PTR [r9+r11]
 	movq	xmm0, r15
 	movq	xmm4, rsp
@@ -98,8 +102,7 @@ main_loop:
 	movd eax, xmm6
 	movd edx, xmm7
 
-	INCLUDE random_math.inc
-
+CryptonightR_template_part2:
 	mov	rax, r13
 	mul	r12
 	movq	xmm0, rax
@@ -135,8 +138,9 @@ main_loop:
 	xor	r15, r14
 	movdqa	xmm6, xmm5
 	dec	r8d
-	jnz	main_loop
+	jnz	CryptonightR_template_mainloop
 
+CryptonightR_template_part3:
 	movq	rsp, xmm9
 
 	mov	rbx, QWORD PTR [rsp+136]
@@ -155,10 +159,10 @@ main_loop:
 	pop	r11
 	pop	r10
 	ret	0
-CryptonightR_asm ENDP
+CryptonightR_template_end:
 
 ALIGN 64
-CryptonightR_double_asm PROC
+CryptonightR_template_double_part1:
 	mov	QWORD PTR [rsp+24], rbx
 	push	rbp
 	push	rsi
@@ -233,7 +237,7 @@ CryptonightR_double_asm PROC
 	movq xmm15, QWORD PTR [rsp+104]
 
 	ALIGN 64
-main_loop_double:
+CryptonightR_template_double_mainloop:
 	movdqu	xmm6, XMMWORD PTR [rbx+rsi]
 	movq	xmm0, r12
 	mov	ecx, ebx
@@ -316,7 +320,7 @@ main_loop_double:
 	movd eax, xmm7
 	movd edx, xmm9
 
-	INCLUDE random_math.inc
+CryptonightR_template_double_part2:
 
 	movq rsp, xmm0
 	mov DWORD PTR [rsp+16], ebx
@@ -398,7 +402,7 @@ main_loop_double:
 	movd eax, xmm8
 	movd edx, xmm10
 
-	INCLUDE random_math.inc
+CryptonightR_template_double_part3:
 
 	movq rsp, xmm0
 	mov DWORD PTR [rsp], ebx
@@ -448,7 +452,9 @@ main_loop_double:
 	xor	r13, r9
 	and	r8d, 2097136
 	dec r11d
-	jnz	main_loop_double
+	jnz	CryptonightR_template_double_mainloop
+
+CryptonightR_template_double_part4:
 
 	mov	rbx, QWORD PTR [rsp+368]
 	movaps	xmm6, XMMWORD PTR [rsp+128]
@@ -470,7 +476,4 @@ main_loop_double:
 	pop	rsi
 	pop	rbp
 	ret	0
-CryptonightR_double_asm ENDP
-
-_TEXT_CN_MAINLOOP ENDS
-END
+CryptonightR_template_double_end:

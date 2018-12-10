@@ -98,6 +98,7 @@
     <MASM Include="CryptonightR_template.asm" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="CryptonightR_template.inc" />
     <None Include="random_math.inc" />
     <None Include="random_math.inl" />
   </ItemGroup>

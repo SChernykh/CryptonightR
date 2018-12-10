@@ -30,6 +30,9 @@
     <None Include="random_math.inl">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="CryptonightR_template.inc">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="CryptonightR.asm">
