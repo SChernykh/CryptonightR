@@ -21,13 +21,14 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code, int cod
 	// 8 registers for random math
 	// r0-r3 are variable
 	// r4-r7 are constants taken from main loop registers on every iteration
-	uint32_t r[8];
+	v4_reg r[8];
+	v4_reg* data = reinterpret_cast<v4_reg*>(h0 + 12);
 
 	// Initial register values for random math
-	r[0] = static_cast<uint32_t>(h0[12]);
-	r[1] = static_cast<uint32_t>(h0[12] >> 32);
-	r[2] = static_cast<uint32_t>(h0[13]);
-	r[3] = static_cast<uint32_t>(h0[13] >> 32);
+	r[0] = data[0];
+	r[1] = data[1];
+	r[2] = data[2];
+	r[3] = data[3];
 
 	for (size_t i = 0; i < 524288; i++)
 	{
@@ -55,18 +56,26 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code, int cod
 		ch = ((uint64_t*)&l0[idx1])[1];
 
 		// Random math (replaces integer math from CryptonightV2)
-		{
-			cl ^= (r[0] + r[1]) | (static_cast<uint64_t>(r[2] + r[3]) << 32);
+#if RANDOM_MATH_64_BIT == 1
+		cl ^= (r[0] + r[1]) ^ (r[2] + r[3]);
 
-			// Random math constants are taken from main loop registers
-			// They're new on every iteration
-			r[4] = static_cast<uint32_t>(_mm_cvtsi128_si32(ax0));
-			r[5] = static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(ax0, 8)));
-			r[6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx0));
-			r[7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx1));
+		// Random math constants are taken from main loop registers
+		// They're new on every iteration
+		r[4] = static_cast<uint64_t>(_mm_cvtsi128_si64(ax0));
+		r[5] = static_cast<uint64_t>(_mm_cvtsi128_si64(_mm_srli_si128(ax0, 8)));
+		r[6] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx0));
+		r[7] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx1));
+#else
+		cl ^= (r[0] + r[1]) | (static_cast<uint64_t>(r[2] + r[3]) << 32);
 
-			v4_random_math(code, code_size, r);
-		}
+		// Random math constants are taken from main loop registers
+		// They're new on every iteration
+		r[4] = static_cast<uint32_t>(_mm_cvtsi128_si32(ax0));
+		r[5] = static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(ax0, 8)));
+		r[6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx0));
+		r[7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx1));
+#endif
+		v4_random_math(code, code_size, r);
 
 		lo = _umul128(idx0, cl, &hi);
 
@@ -118,17 +127,19 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 	uint32_t idx01 = idx00 & 0x1FFFF0;
 	uint32_t idx11 = idx10 & 0x1FFFF0;
 
-	uint32_t r[2][8];
+	v4_reg r[2][8];
+	v4_reg* data0 = reinterpret_cast<v4_reg*>(h0 + 12);
+	v4_reg* data1 = reinterpret_cast<v4_reg*>(h1 + 12);
 
-	r[0][0] = static_cast<uint32_t>(h0[12]);
-	r[0][1] = static_cast<uint32_t>(h0[12] >> 32);
-	r[0][2] = static_cast<uint32_t>(h0[13]);
-	r[0][3] = static_cast<uint32_t>(h0[13] >> 32);
+	r[0][0] = data0[0];
+	r[0][1] = data0[1];
+	r[0][2] = data0[2];
+	r[0][3] = data0[3];
 
-	r[1][0] = static_cast<uint32_t>(h1[12]);
-	r[1][1] = static_cast<uint32_t>(h1[12] >> 32);
-	r[1][2] = static_cast<uint32_t>(h1[13]);
-	r[1][3] = static_cast<uint32_t>(h1[13] >> 32);
+	r[1][0] = data1[0];
+	r[1][1] = data1[1];
+	r[1][2] = data1[2];
+	r[1][3] = data1[3];
 
 	for (size_t i = 0; i < 524288; i++)
 	{
@@ -174,18 +185,26 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 		cl = ((uint64_t*)&l0[idx01])[0];
 		ch = ((uint64_t*)&l0[idx01])[1];
 
-		{
-			cl ^= (r[0][0] + r[0][1]) | (static_cast<uint64_t>(r[0][2] + r[0][3]) << 32);
+#if RANDOM_MATH_64_BIT == 1
+		cl ^= (r[0][0] + r[0][1]) ^ (r[0][2] + r[0][3]);
 
-			// Random math constants are taken from main loop registers
-			// They're new on every iteration
-			r[0][4] = static_cast<uint32_t>(_mm_cvtsi128_si32(ax0));
-			r[0][5] = static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(ax0, 8)));
-			r[0][6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx00));
-			r[0][7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx01));
+		// Random math constants are taken from main loop registers
+		// They're new on every iteration
+		r[0][4] = static_cast<uint64_t>(_mm_cvtsi128_si64(ax0));
+		r[0][5] = static_cast<uint64_t>(_mm_cvtsi128_si64(_mm_srli_si128(ax0, 8)));
+		r[0][6] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx00));
+		r[0][7] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx01));
+#else
+		cl ^= (r[0][0] + r[0][1]) | (static_cast<uint64_t>(r[0][2] + r[0][3]) << 32);
 
-			v4_random_math(code, code_size, r[0]);
-		}
+		// Random math constants are taken from main loop registers
+		// They're new on every iteration
+		r[0][4] = static_cast<uint32_t>(_mm_cvtsi128_si32(ax0));
+		r[0][5] = static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(ax0, 8)));
+		r[0][6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx00));
+		r[0][7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx01));
+#endif
+		v4_random_math(code, code_size, r[0]);
 
 		lo = _umul128(idx00, cl, &hi);
 
@@ -213,18 +232,26 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 		cl = ((uint64_t*)&l1[idx11])[0];
 		ch = ((uint64_t*)&l1[idx11])[1];
 
-		{
-			cl ^= (r[1][0] + r[1][1]) | (static_cast<uint64_t>(r[1][2] + r[1][3]) << 32);
+#if RANDOM_MATH_64_BIT == 1
+		cl ^= (r[1][0] + r[1][1]) ^ (r[1][2] + r[1][3]);
 
-			// Random math constants are taken from main loop registers
-			// They're new on every iteration
-			r[1][4] = static_cast<uint32_t>(_mm_cvtsi128_si32(ax1));
-			r[1][5] = static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(ax1, 8)));
-			r[1][6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx10));
-			r[1][7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx11));
+		// Random math constants are taken from main loop registers
+		// They're new on every iteration
+		r[1][4] = static_cast<uint64_t>(_mm_cvtsi128_si64(ax1));
+		r[1][5] = static_cast<uint64_t>(_mm_cvtsi128_si64(_mm_srli_si128(ax1, 8)));
+		r[1][6] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx10));
+		r[1][7] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx11));
+#else
+		cl ^= (r[1][0] + r[1][1]) | (static_cast<uint64_t>(r[1][2] + r[1][3]) << 32);
 
-			v4_random_math(code, code_size, r[1]);
-		}
+		// Random math constants are taken from main loop registers
+		// They're new on every iteration
+		r[1][4] = static_cast<uint32_t>(_mm_cvtsi128_si32(ax1));
+		r[1][5] = static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(ax1, 8)));
+		r[1][6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx10));
+		r[1][7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx11));
+#endif
+		v4_random_math(code, code_size, r[1]);
 
 		lo = _umul128(idx10, cl, &hi);
 
@@ -272,10 +299,11 @@ void CryptonightR(cryptonight_ctx* ctx0)
 	uint64_t idx0 = h0[0] ^ h0[4];
 	uint64_t idx1 = idx0 & 0x1FFFF0;
 
-	uint32_t r0 = static_cast<uint32_t>(h0[12]);
-	uint32_t r1 = static_cast<uint32_t>(h0[12] >> 32);
-	uint32_t r2 = static_cast<uint32_t>(h0[13]);
-	uint32_t r3 = static_cast<uint32_t>(h0[13] >> 32);
+	v4_reg* data = reinterpret_cast<v4_reg*>(h0 + 12);
+	v4_reg r0 = data[0];
+	v4_reg r1 = data[1];
+	v4_reg r2 = data[2];
+	v4_reg r3 = data[3];
 
 	for (size_t i = 0; i < 524288; i++)
 	{
@@ -301,8 +329,13 @@ void CryptonightR(cryptonight_ctx* ctx0)
 		cl = ((uint64_t*)&l0[idx1])[0];
 		ch = ((uint64_t*)&l0[idx1])[1];
 
+#if RANDOM_MATH_64_BIT == 1
+		cl ^= (r0 + r1) ^ (r2 + r3);
+		random_math(r0, r1, r2, r3, ax0.m128i_u64[0], ax0.m128i_u64[1], bx0.m128i_u64[0], bx1.m128i_u64[0]);
+#else
 		cl ^= (r0 + r1) | (static_cast<uint64_t>(r2 + r3) << 32);
 		random_math(r0, r1, r2, r3, ax0.m128i_u32[0], ax0.m128i_u32[2], bx0.m128i_u32[0], bx1.m128i_u32[0]);
+#endif
 
 		lo = _umul128(idx0, cl, &hi);
 
@@ -353,15 +386,18 @@ void CryptonightR_double(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 	uint32_t idx01 = idx00 & 0x1FFFF0;
 	uint32_t idx11 = idx10 & 0x1FFFF0;
 
-	uint32_t r00 = static_cast<uint32_t>(h0[12]);
-	uint32_t r01 = static_cast<uint32_t>(h0[12] >> 32);
-	uint32_t r02 = static_cast<uint32_t>(h0[13]);
-	uint32_t r03 = static_cast<uint32_t>(h0[13] >> 32);
+	v4_reg* data0 = reinterpret_cast<v4_reg*>(h0 + 12);
+	v4_reg* data1 = reinterpret_cast<v4_reg*>(h1 + 12);
 
-	uint32_t r10 = static_cast<uint32_t>(h1[12]);
-	uint32_t r11 = static_cast<uint32_t>(h1[12] >> 32);
-	uint32_t r12 = static_cast<uint32_t>(h1[13]);
-	uint32_t r13 = static_cast<uint32_t>(h1[13] >> 32);
+	v4_reg r00 = data0[0];
+	v4_reg r01 = data0[1];
+	v4_reg r02 = data0[2];
+	v4_reg r03 = data0[3];
+
+	v4_reg r10 = data1[0];
+	v4_reg r11 = data1[1];
+	v4_reg r12 = data1[2];
+	v4_reg r13 = data1[3];
 
 	for (size_t i = 0; i < 524288; i++)
 	{
@@ -407,8 +443,13 @@ void CryptonightR_double(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 		cl = ((uint64_t*)&l0[idx01])[0];
 		ch = ((uint64_t*)&l0[idx01])[1];
 
+#if RANDOM_MATH_64_BIT == 1
+		cl ^= (r00 + r01) ^ (r02 + r03);
+		random_math(r00, r01, r02, r03, ax0.m128i_u64[0], ax0.m128i_u64[1], bx00.m128i_u64[0], bx01.m128i_u64[0]);
+#else
 		cl ^= (r00 + r01) | (static_cast<uint64_t>(r02 + r03) << 32);
 		random_math(r00, r01, r02, r03, ax0.m128i_u32[0], ax0.m128i_u32[2], bx00.m128i_u32[0], bx01.m128i_u32[0]);
+#endif
 
 		lo = _umul128(idx00, cl, &hi);
 
@@ -436,8 +477,13 @@ void CryptonightR_double(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 		cl = ((uint64_t*)&l1[idx11])[0];
 		ch = ((uint64_t*)&l1[idx11])[1];
 
+#if RANDOM_MATH_64_BIT == 1
+		cl ^= (r10 + r11) ^ (r12 + r13);
+		random_math(r10, r11, r12, r13, ax1.m128i_u64[0], ax1.m128i_u64[1], bx10.m128i_u64[0], bx11.m128i_u64[0]);
+#else
 		cl ^= (r10 + r11) | (static_cast<uint64_t>(r12 + r13) << 32);
 		random_math(r10, r11, r12, r13, ax1.m128i_u32[0], ax1.m128i_u32[2], bx10.m128i_u32[0], bx11.m128i_u32[0]);
+#endif
 
 		lo = _umul128(idx10, cl, &hi);
 
@@ -628,14 +674,14 @@ int CryptonightR_test()
 		return 2;
 	}
 
-    init_ctx(ctx[2], 0);
-    init_ctx(ctx[3], 1);
-    CryptonightR_double_generated(ctx[2], ctx[3]);
-    if ((memcmp(ctx[0]->long_state, ctx[2]->long_state, MEMORY) != 0) || (memcmp(ctx[1]->long_state, ctx[3]->long_state, MEMORY) != 0))
-    {
-        std::cerr << "Generated machine code (double) doesn't match reference code" << std::endl;
-        return 3;
-    }
+	init_ctx(ctx[2], 0);
+	init_ctx(ctx[3], 1);
+	CryptonightR_double_generated(ctx[2], ctx[3]);
+	if ((memcmp(ctx[0]->long_state, ctx[2]->long_state, MEMORY) != 0) || (memcmp(ctx[1]->long_state, ctx[3]->long_state, MEMORY) != 0))
+	{
+		std::cerr << "Generated machine code (double) doesn't match reference code" << std::endl;
+		return 3;
+	}
 
     for (int i = 0; i < 4; ++i)
 	{

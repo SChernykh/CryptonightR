@@ -10,9 +10,14 @@
 #include "CryptonightR_template.h"
 
 // Registers to use in generated x86-64 code
-static const char* reg[8] = {
+static const char* reg32[8] = {
 	"ebx", "esi", "edi", "ebp",
 	"esp", "r15d", "eax", "edx"
+};
+
+static const char* reg64[8] = {
+	"rbx", "rsi", "rdi", "rbp",
+	"rsp", "r15", "rax", "rdx"
 };
 
 void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t>& machine_code)
@@ -27,13 +32,19 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 	std::ofstream f_asm("random_math.inc");
 	DUMP(f, "// Auto-generated file, do not edit\n\n");
 	DUMP(f_asm, "; Auto-generated file, do not edit\n\n");
-	DUMP(f, "FORCEINLINE void random_math(uint32_t& r0, uint32_t& r1, uint32_t& r2, uint32_t& r3, const uint32_t r4, const uint32_t r5, const uint32_t r6, const uint32_t r7)\n");
+	DUMP(f, "FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, const v4_reg r4, const v4_reg r5, const v4_reg r6, const v4_reg r7)\n");
 	DUMP(f, "{\n");
 #else
 #define DUMP(x, ...)
 #endif
 
 	uint32_t prev_rot_src = (uint32_t)(-1);
+
+#if RANDOM_MATH_64_BIT == 1
+#define reg reg64
+#else
+#define reg reg32
+#endif
 
 	for (int i = 0; i < code_size; ++i)
 	{
@@ -72,10 +83,15 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 			break;
 
 		case ROR:
+#if RANDOM_MATH_64_BIT == 1
+			DUMP(f, "\tr" << a << " = _rotr64(r" << a << ", r" << b << ");");
+#else
 			DUMP(f, "\tr" << a << " = _rotr(r" << a << ", r" << b << ");");
+#endif
+
 			if (b != prev_rot_src)
 			{
-				DUMP(f_asm, "\tmov\tecx, " << reg[b] << "\n");
+				DUMP(f_asm, "\tmov\tecx, " << reg32[b] << "\n");
 				prev_rot_src = b;
 
 				const uint8_t* p1 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i]];
@@ -86,10 +102,15 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 			break;
 
 		case ROL:
+#if RANDOM_MATH_64_BIT == 1
+			DUMP(f, "\tr" << a << " = _rotl64(r" << a << ", r" << b << ");");
+#else
 			DUMP(f, "\tr" << a << " = _rotl(r" << a << ", r" << b << ");");
+#endif
+
 			if (b != prev_rot_src)
 			{
-				DUMP(f_asm, "\tmov\tecx, " << reg[b] << "\n");
+				DUMP(f_asm, "\tmov\tecx, " << reg32[b] << "\n");
 				prev_rot_src = b;
 
 				const uint8_t* p1 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i]];
@@ -253,6 +274,12 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 
 	f_asm << "\nINCLUDE CryptonightR_template.inc\n\n";
 
+#if RANDOM_MATH_64_BIT == 1
+#define reg reg64
+#else
+#define reg reg32
+#endif
+
 	for (int i = 0; i <= 256; ++i)
 	{
 		f_asm << "CryptonightR_instruction" << i << ":\n";
@@ -303,7 +330,7 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 		{
 		case ROR:
 		case ROL:
-			f_asm << "\tmov\tecx, " << reg[b];
+			f_asm << "\tmov\tecx, " << reg32[b];
 			break;
 		}
 		f_asm << "\n";
@@ -320,16 +347,16 @@ extern int CryptonightR_test();
 
 int main()
 {
-	// Only needs to be done if VM instructions list, encoding or semantics change
-	//generate_asm_template();
-
 #if DUMP_SOURCE_CODE
+	generate_asm_template();
+
 	V4_Instruction code[256];
 	int code_size = v4_random_math_init(code, RND_SEED);
 
 	std::vector<uint8_t> machine_code;
 	compile_code(code, code_size, machine_code);
-#endif
-
+	return 0;
+#else
 	return CryptonightR_test();
+#endif
 }

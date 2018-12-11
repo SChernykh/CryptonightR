@@ -54,10 +54,17 @@ CryptonightR_template_part1:
 	mov rsp, r8
 	mov	r8d, 524288
 
+IF RANDOM_MATH_64_BIT
+	mov	rbx, [rdx+96]
+	mov	rsi, [rdx+104]
+	mov	rdi, [rdx+112]
+	mov	rbp, [rdx+120]
+ELSE
 	mov	ebx, [rdx+96]
 	mov	esi, [rdx+100]
 	mov	edi, [rdx+104]
 	mov	ebp, [rdx+108]
+ENDIF
 
 	ALIGN 64
 CryptonightR_template_mainloop:
@@ -90,17 +97,29 @@ CryptonightR_template_mainloop:
 	movdqa	xmm0, xmm5
 	pxor	xmm0, xmm6
 	movdqu	XMMWORD PTR [rdx], xmm0
+
+IF RANDOM_MATH_64_BIT
+	lea	rax, [rbx+rsi]
+	lea	rdx, [rdi+rbp]
+	xor	rax, rdx
+ELSE
 	lea	eax, [ebx+esi]
 	lea	edx, [edi+ebp]
 	shl rdx, 32
 	or	rax, rdx
+ENDIF
 
 	mov	r13, QWORD PTR [r10+r11]
 	mov	r14, QWORD PTR [r10+r11+8]
 	xor	r13, rax
 
+IF RANDOM_MATH_64_BIT
+	movq rax, xmm6
+	movq rdx, xmm7
+ELSE
 	movd eax, xmm6
 	movd edx, xmm7
+ENDIF
 
 CryptonightR_template_part2:
 	mov	rax, r13
@@ -171,7 +190,7 @@ CryptonightR_template_double_part1:
 	push	r13
 	push	r14
 	push	r15
-	sub	rsp, 288
+	sub	rsp, 320
 	mov	r14, QWORD PTR [rcx+32]
 	mov	r8, rcx
 	xor	r14, QWORD PTR [rcx]
@@ -192,30 +211,43 @@ CryptonightR_template_double_part1:
 	mov	r13, QWORD PTR [rdx+40]
 	mov	rdi, QWORD PTR [rdx+224]
 	xor	r13, QWORD PTR [rdx+8]
-	movaps	XMMWORD PTR [rsp+128], xmm6
-	movaps	XMMWORD PTR [rsp+144], xmm7
-	movaps	XMMWORD PTR [rsp+160], xmm8
-	movaps	XMMWORD PTR [rsp+176], xmm9
-	movaps	XMMWORD PTR [rsp+192], xmm10
-	movaps	XMMWORD PTR [rsp+208], xmm11
-	movaps	XMMWORD PTR [rsp+224], xmm12
-	movaps	XMMWORD PTR [rsp+240], xmm13
-	movaps	XMMWORD PTR [rsp+256], xmm14
-	movaps	XMMWORD PTR [rsp+272], xmm15
+	movaps	XMMWORD PTR [rsp+160], xmm6
+	movaps	XMMWORD PTR [rsp+176], xmm7
+	movaps	XMMWORD PTR [rsp+192], xmm8
+	movaps	XMMWORD PTR [rsp+208], xmm9
+	movaps	XMMWORD PTR [rsp+224], xmm10
+	movaps	XMMWORD PTR [rsp+240], xmm11
+	movaps	XMMWORD PTR [rsp+256], xmm12
+	movaps	XMMWORD PTR [rsp+272], xmm13
+	movaps	XMMWORD PTR [rsp+288], xmm14
+	movaps	XMMWORD PTR [rsp+304], xmm15
 	movq	xmm7, rax
 	mov	rax, QWORD PTR [r8+80]
 	xor	rax, QWORD PTR [r8+64]
-	movaps xmm1, XMMWORD PTR [r8+96]
-	movaps xmm2, XMMWORD PTR [rdx+96]
-	movaps XMMWORD PTR [rsp+16], xmm1
-	movaps XMMWORD PTR [rsp], xmm2
+
+IF RANDOM_MATH_64_BIT
+	movaps xmm1, XMMWORD PTR [rdx+96]
+	movaps xmm2, XMMWORD PTR [rdx+112]
+	movaps xmm3, XMMWORD PTR [r8+96]
+	movaps xmm4, XMMWORD PTR [r8+112]
+	movaps XMMWORD PTR [rsp], xmm1
+	movaps XMMWORD PTR [rsp+16], xmm2
+	movaps XMMWORD PTR [rsp+32], xmm3
+	movaps XMMWORD PTR [rsp+48], xmm4
+ELSE
+	movaps xmm1, XMMWORD PTR [rdx+96]
+	movaps xmm2, XMMWORD PTR [r8+96]
+	movaps XMMWORD PTR [rsp], xmm1
+	movaps XMMWORD PTR [rsp+16], xmm2
+ENDIF
+
 	mov	r8d, r15d
 	punpcklqdq xmm7, xmm0
 	movq	xmm0, rcx
 	mov	rcx, QWORD PTR [rdx+56]
 	xor	rcx, QWORD PTR [rdx+24]
 	movq	xmm9, rax
-	mov	QWORD PTR [rsp+96], rsi
+	mov	QWORD PTR [rsp+128], rsi
 	mov	rax, QWORD PTR [rdx+48]
 	xor	rax, QWORD PTR [rdx+16]
 	punpcklqdq xmm9, xmm0
@@ -223,7 +255,7 @@ CryptonightR_template_double_part1:
 	mov	rcx, QWORD PTR [rdx+88]
 	xor	rcx, QWORD PTR [rdx+72]
 	movq	xmm8, rax
-	mov	QWORD PTR [rsp+104], rdi
+	mov	QWORD PTR [rsp+136], rdi
 	mov	rax, QWORD PTR [rdx+80]
 	xor	rax, QWORD PTR [rdx+64]
 	punpcklqdq xmm8, xmm0
@@ -233,8 +265,8 @@ CryptonightR_template_double_part1:
 	movq	xmm10, rax
 	punpcklqdq xmm10, xmm0
 	
-	movq xmm14, QWORD PTR [rsp+96]
-	movq xmm15, QWORD PTR [rsp+104]
+	movq xmm14, QWORD PTR [rsp+128]
+	movq xmm15, QWORD PTR [rsp+136]
 
 	ALIGN 64
 CryptonightR_template_double_mainloop:
@@ -302,8 +334,18 @@ CryptonightR_template_double_mainloop:
 	movq xmm11, rbp
 	movq xmm12, r15
 	movq xmm13, rdx
-	mov [rsp+80], rcx
+	mov [rsp+112], rcx
 
+IF RANDOM_MATH_64_BIT
+	mov rbx, QWORD PTR [rsp+32]
+	mov rsi, QWORD PTR [rsp+40]
+	mov rdi, QWORD PTR [rsp+48]
+	mov rbp, QWORD PTR [rsp+56]
+
+	lea	rax, [rbx+rsi]
+	lea	rdx, [rdi+rbp]
+	xor	rax, rdx
+ELSE
 	mov ebx, DWORD PTR [rsp+16]
 	mov esi, DWORD PTR [rsp+20]
 	mov edi, DWORD PTR [rsp+24]
@@ -313,27 +355,42 @@ CryptonightR_template_double_mainloop:
 	lea	edx, [edi+ebp]
 	shl rdx, 32
 	or	rax, rdx
+ENDIF
 	xor r8, rax
 
+IF RANDOM_MATH_64_BIT
+	movq rsp, xmm3
+	pextrq r15, xmm3, 1
+	movq rax, xmm7
+	movq rdx, xmm9
+ELSE
 	movd esp, xmm3
 	pextrd r15d, xmm3, 2
 	movd eax, xmm7
 	movd edx, xmm9
+ENDIF
 
 CryptonightR_template_double_part2:
 
 	movq rsp, xmm0
+IF RANDOM_MATH_64_BIT
+	mov QWORD PTR [rsp+32], rbx
+	mov QWORD PTR [rsp+40], rsi
+	mov QWORD PTR [rsp+48], rdi
+	mov QWORD PTR [rsp+56], rbp
+ELSE
 	mov DWORD PTR [rsp+16], ebx
 	mov DWORD PTR [rsp+20], esi
 	mov DWORD PTR [rsp+24], edi
 	mov DWORD PTR [rsp+28], ebp
+ENDIF
 
 	movq rsi, xmm1
 	movq rdi, xmm2
 	movq rbp, xmm11
 	movq r15, xmm12
 	movq rdx, xmm13
-	mov rcx, [rsp+80]
+	mov rcx, [rsp+112]
 	; Random math 1 end
 
 	mov rbx, r8
@@ -383,8 +440,18 @@ CryptonightR_template_double_part2:
 	movq xmm11, rdi
 	movq xmm12, rbp
 	movq xmm13, r15
-	mov [rsp+72], rcx
+	mov [rsp+104], rcx
 
+IF RANDOM_MATH_64_BIT
+	mov rbx, QWORD PTR [rsp]
+	mov rsi, QWORD PTR [rsp+8]
+	mov rdi, QWORD PTR [rsp+16]
+	mov rbp, QWORD PTR [rsp+24]
+
+	lea	rax, [rbx+rsi]
+	lea	rdx, [rdi+rbp]
+	xor	rax, rdx
+ELSE
 	mov ebx, DWORD PTR [rsp]
 	mov esi, DWORD PTR [rsp+4]
 	mov edi, DWORD PTR [rsp+8]
@@ -394,28 +461,44 @@ CryptonightR_template_double_part2:
 	lea	edx, [edi+ebp]
 	shl rdx, 32
 	or	rax, rdx
+ENDIF
+
 	xor r8, rax
 	movq xmm3, r8
 
+IF RANDOM_MATH_64_BIT
+	movq rsp, xmm4
+	pextrq r15, xmm4, 1
+	movq rax, xmm8
+	movq rdx, xmm10
+ELSE
 	movd esp, xmm4
 	pextrd r15d, xmm4, 2
 	movd eax, xmm8
 	movd edx, xmm10
+ENDIF
 
 CryptonightR_template_double_part3:
 
 	movq rsp, xmm0
+IF RANDOM_MATH_64_BIT
+	mov QWORD PTR [rsp], rbx
+	mov QWORD PTR [rsp+8], rsi
+	mov QWORD PTR [rsp+16], rdi
+	mov QWORD PTR [rsp+24], rbp
+ELSE
 	mov DWORD PTR [rsp], ebx
 	mov DWORD PTR [rsp+4], esi
 	mov DWORD PTR [rsp+8], edi
 	mov DWORD PTR [rsp+12], ebp
+ENDIF
 
 	movq rbx, xmm1
 	movq rsi, xmm2
 	movq rdi, xmm11
 	movq rbp, xmm12
 	movq r15, xmm13
-	mov rcx, [rsp+72]
+	mov rcx, [rsp+104]
 	; Random math 2 end
 
 	mov rax, r8
@@ -456,18 +539,18 @@ CryptonightR_template_double_part3:
 
 CryptonightR_template_double_part4:
 
-	mov	rbx, QWORD PTR [rsp+368]
-	movaps	xmm6, XMMWORD PTR [rsp+128]
-	movaps	xmm7, XMMWORD PTR [rsp+144]
-	movaps	xmm8, XMMWORD PTR [rsp+160]
-	movaps	xmm9, XMMWORD PTR [rsp+176]
-	movaps	xmm10, XMMWORD PTR [rsp+192]
-	movaps	xmm11, XMMWORD PTR [rsp+208]
-	movaps	xmm12, XMMWORD PTR [rsp+224]
-	movaps	xmm13, XMMWORD PTR [rsp+240]
-	movaps	xmm14, XMMWORD PTR [rsp+256]
-	movaps	xmm15, XMMWORD PTR [rsp+272]
-	add	rsp, 288
+	mov	rbx, QWORD PTR [rsp+400]
+	movaps	xmm6, XMMWORD PTR [rsp+160]
+	movaps	xmm7, XMMWORD PTR [rsp+176]
+	movaps	xmm8, XMMWORD PTR [rsp+192]
+	movaps	xmm9, XMMWORD PTR [rsp+208]
+	movaps	xmm10, XMMWORD PTR [rsp+224]
+	movaps	xmm11, XMMWORD PTR [rsp+240]
+	movaps	xmm12, XMMWORD PTR [rsp+256]
+	movaps	xmm13, XMMWORD PTR [rsp+272]
+	movaps	xmm14, XMMWORD PTR [rsp+288]
+	movaps	xmm15, XMMWORD PTR [rsp+304]
+	add	rsp, 320
 	pop	r15
 	pop	r14
 	pop	r13
