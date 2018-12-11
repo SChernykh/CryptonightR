@@ -25,7 +25,14 @@ Reference implementation (variant4 code in the following files):
 - https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/variant4_random_math.h
 - https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/slow-hash.c
 
-Optimized implementation including x86-64 machine code generator is available in this repository.
+Reference implementation in Monero code base:
+- https://github.com/SChernykh/monero/tree/CryptonightR
+
+Optimized CPU miner:
+- [xmrig](https://github.com/SChernykh/xmrig/tree/CryptonightR)
+
+Optimized GPU miner:
+- will be available before December 20h, 2018
 
 ### Design choices
 
@@ -48,8 +55,6 @@ ASIC with on-chip memory will get 3-4.5 times slower due to increased math laten
 
 ### Further development plans
 
-- Reference implementation in Monero's code base (`slow-hash.c`, dependent files and tests): [done](https://github.com/SChernykh/monero/commit/d756eca751afc9febd941708c8671155f08a6129)
-- Optimized CPU miner (xmrig): December 15th, 2018
 - Optimized GPU miner (xmrig-amd): December 20th, 2018
 - Pool software: December 24th, 2018
 - Public testing: January 2019
