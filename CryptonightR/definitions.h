@@ -23,8 +23,12 @@ typedef struct {
 
 #ifdef __GNUC__
 #define FORCEINLINE __attribute__((always_inline)) inline
+#define NOINLINE __attribute__ ((noinline))
+#define UNREACHABLE __builtin_unreachable()
 #else
 #define FORCEINLINE __forceinline
+#define NOINLINE __declspec(noinline)
+#define UNREACHABLE __assume(false)
 #endif
 
 #ifdef __GNUC__
