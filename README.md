@@ -32,7 +32,7 @@ Optimized CPU miner:
 - [xmrig](https://github.com/SChernykh/xmrig/tree/CryptonightR)
 
 Optimized GPU miner:
-- will be available before December 20h, 2018
+- [xmrig-amd](https://github.com/SChernykh/xmrig-amd/tree/CryptonightR)
 
 ### Design choices
 
@@ -55,6 +55,5 @@ ASIC with on-chip memory will get 3-4.5 times slower due to increased math laten
 
 ### Further development plans
 
-- Optimized GPU miner (xmrig-amd): December 20th, 2018
 - Pool software: December 24th, 2018
 - Public testing: January 2019
