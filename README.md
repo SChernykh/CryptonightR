@@ -34,6 +34,10 @@ Optimized CPU miner:
 Optimized GPU miner:
 - [xmrig-amd](https://github.com/SChernykh/xmrig-amd/tree/CryptonightR)
 
+Pool software:
+- [node-multi-hashing](https://github.com/SChernykh/node-multi-hashing)
+- [node-cryptonight-hashing](https://github.com/SChernykh/node-cryptonight-hashing/tree/CryptonightR)
+
 ### Design choices
 
 Instruction set is chosen from instructions that are efficient on CPUs/GPUs compared to ASIC: all of them except XOR are complex operations at logic circuit level and require O(logN) gate delay. These operations have been studied extensively for decades and modern CPUs/GPUs already have the best implementations.
@@ -55,5 +59,4 @@ ASIC with on-chip memory will get 3-4.5 times slower due to increased math laten
 
 ### Further development plans
 
-- Pool software: December 24th, 2018
 - Public testing: January 2019
