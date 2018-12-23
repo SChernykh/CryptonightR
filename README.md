@@ -38,6 +38,8 @@ Pool software:
 - [node-multi-hashing](https://github.com/SChernykh/node-multi-hashing)
 - [node-cryptonight-hashing](https://github.com/SChernykh/node-cryptonight-hashing/tree/CryptonightR)
 
+Test pool: https://testnet.wowne.ro/
+
 ### Design choices
 
 Instruction set is chosen from instructions that are efficient on CPUs/GPUs compared to ASIC: all of them except XOR are complex operations at logic circuit level and require O(logN) gate delay. These operations have been studied extensively for decades and modern CPUs/GPUs already have the best implementations.
