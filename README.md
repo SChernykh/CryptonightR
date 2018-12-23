@@ -37,6 +37,7 @@ Optimized GPU miner:
 Pool software:
 - [node-multi-hashing](https://github.com/SChernykh/node-multi-hashing)
 - [node-cryptonight-hashing](https://github.com/SChernykh/node-cryptonight-hashing/tree/CryptonightR)
+- [nodejs-pool mod example](https://github.com/wowario/nodejs-pool/commit/3b3838a8703d43932cc85897ab2b77a78012be41)
 
 **Test pools:**
 - https://testnet.wowne.ro/
