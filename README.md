@@ -38,7 +38,8 @@ Pool software:
 - [node-multi-hashing](https://github.com/SChernykh/node-multi-hashing)
 - [node-cryptonight-hashing](https://github.com/SChernykh/node-cryptonight-hashing/tree/CryptonightR)
 
-Test pool: https://testnet.wowne.ro/
+**Test pools:**
+- https://testnet.wowne.ro/
 
 ### Design choices
 
