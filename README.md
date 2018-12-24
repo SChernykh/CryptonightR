@@ -54,7 +54,11 @@ It also accounts for super-scalar and out of order CPUs which can execute more t
 
 ### Performance on CPU/GPU and ASIC
 
-CryptonightR parameters were chosen to have the same hashrate as CryptonightV2 on CPU/GPU.
+CryptonightR parameters were chosen to:
+- have the same hashrate as CryptonightV2 on CPU/GPU
+- have a bit smaller power consumption on CPU/GPU
+
+Actual numbers (hashrate and power consumption for different CPUs and GPUs) will be available in January 2019.
 
 ASIC will have to implement some simple and minimalistic instruction decoder and execution pipeline. While it's not impossible, it's much harder to create efficient out of order pipeline which can track all data dependencies and do more than 1 instruction per cycle. It will also have to use fixed clock cycle length, just like CPU, so for example XOR (single logic gate) won't be much faster anymore.
 
