@@ -33,6 +33,7 @@ Optimized CPU miner:
 
 Optimized GPU miner:
 - [xmrig-amd](https://github.com/SChernykh/xmrig-amd/tree/CryptonightR)
+- [xmrig-nvidia](https://github.com/SChernykh/xmrig-nvidia/tree/CryptonightR)
 
 Pool software:
 - [node-multi-hashing](https://github.com/SChernykh/node-multi-hashing)
