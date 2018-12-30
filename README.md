@@ -19,7 +19,7 @@ There are 8 registers named R0-R7. Registers R0-R3 are variable, registers R4-R7
 
 All registers are 32 bit to enable efficient GPU implementation.
 
-The random sequence changes every block. Block height is used as a seed for random number generator. This allows CPU/GPU miners to precompile optimized code for each block. It also allows to verify optimized code for all future blocks against reference implementation, so it'll be guaranteed safe to use in monero daemon/wallet software.
+The random sequence changes every block. Block height is used as a seed for random number generator. This allows CPU/GPU miners to precompile optimized code for each block. It also allows to verify optimized code for all future blocks against reference implementation, so it'll be guaranteed safe to use in Monero daemon/wallet software.
 
 Reference implementation (variant4 code in the following files):
 - https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/variant4_random_math.h
@@ -68,4 +68,5 @@ ASIC with on-chip memory will get 3-4.5 times slower due to increased math laten
 
 ### Further development plans
 
-- Public testing: January 2019
+- Public testing: [ongoing](https://github.com/SChernykh/CryptonightR/issues/2)
+- Algorithm tweaking (if needed) based on testing results: January 2019
