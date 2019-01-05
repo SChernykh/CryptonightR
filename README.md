@@ -72,4 +72,4 @@ ASIC with on-chip memory will get 3-4.5 times slower due to increased math laten
 ### Further development plans
 
 - Public testing: [ongoing](https://github.com/SChernykh/CryptonightR/issues/2)
-- Algorithm tweaking (if needed) based on testing results: January 2019
+- Algorithm tweaking to reduce hashrate fluctuations on CPU: January 2019
