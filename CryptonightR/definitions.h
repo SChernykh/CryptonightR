@@ -7,7 +7,7 @@ extern "C" void hash_extra_blake(const void *data, size_t length, char *hash);
 
 #include "../slow_hash_test/variant4_random_math.h"
 
-constexpr uint32_t RND_SEED = 123;
+constexpr uint32_t RND_SEED = 0;
 constexpr uint32_t BENCHMARK_DURATION = 5; // seconds
 
 #define MEMORY 2097152

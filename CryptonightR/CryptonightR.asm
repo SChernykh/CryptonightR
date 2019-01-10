@@ -34,7 +34,7 @@ CryptonightR_asm PROC
 	movq	xmm0, r12
 	movaps	XMMWORD PTR [rsp+32], xmm7
 	movaps	XMMWORD PTR [rsp+16], xmm8
-	movaps	XMMWORD PTR [rsp+16], xmm9
+	movaps	XMMWORD PTR [rsp], xmm9
 	mov	r12, QWORD PTR [rdx+88]
 	xor	r12, QWORD PTR [rdx+72]
 	movq	xmm6, rax
@@ -95,19 +95,18 @@ main_loop:
 	movdqu	XMMWORD PTR [rdx], xmm0
 
 IF RANDOM_MATH_64_BIT
-	lea	rax, [rbx+rsi]
+	lea	r13, [rbx+rsi]
 	lea	rdx, [rdi+rbp]
-	xor	rax, rdx
+	xor	r13, rdx
 ELSE
-	lea	eax, [ebx+esi]
+	lea	r13d, [ebx+esi]
 	lea	edx, [edi+ebp]
 	shl rdx, 32
-	or	rax, rdx
+	or	r13, rdx
 ENDIF
 
-	mov	r13, QWORD PTR [r10+r11]
+	xor	r13, QWORD PTR [r10+r11]
 	mov	r14, QWORD PTR [r10+r11+8]
-	xor	r13, rax
 
 IF RANDOM_MATH_64_BIT
 	movq rax, xmm6

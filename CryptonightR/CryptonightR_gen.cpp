@@ -20,8 +20,9 @@ static const char* reg64[8] = {
 	"rsp", "r15", "rax", "rdx"
 };
 
-void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t>& machine_code)
+int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 {
+	int num_insts = 0;
 	machine_code.clear();
 	machine_code.insert(machine_code.end(), (const uint8_t*) CryptonightR_template_part1, (const uint8_t*) CryptonightR_template_part2);
 
@@ -46,40 +47,42 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 #define reg reg32
 #endif
 
-	for (int i = 0; i < code_size; ++i)
+	for (int i = 0;; ++i, ++num_insts)
 	{
 		const V4_Instruction inst = code[i];
+		if (inst.opcode == RET)
+		{
+			break;
+		}
+
+		V4_InstructionCompact op;
+		op.opcode = (inst.opcode == MUL) ? inst.opcode : (inst.opcode + 2);
+		op.dst_index = inst.dst_index;
+		op.src_index = inst.src_index;
 
 		const uint32_t a = inst.dst_index;
 		const uint32_t b = inst.src_index;
+		const uint8_t c = *((uint8_t*)&op);
 
 		switch (inst.opcode)
 		{
-		case MUL1:
-		case MUL2:
-		case MUL3:
+		case MUL:
 			DUMP(f, "\tr" << a << " *= " << 'r' << b << ";\t");
-			DUMP(f_asm, "\timul\t" << reg[a] << ", " << reg[b]);
+			DUMP(f_asm, "\timul\t" << reg64[a] << ", " << reg64[b]);
 			break;
 
 		case ADD:
 			{
-				int c = reinterpret_cast<const int8_t*>(code)[i + 1];
-
-				DUMP(f, "\tr" << a << " += " << 'r' << b << ((c < 0) ? " - " : " + "));
-				DUMP(f_asm, "\tlea\t" << reg[a] << ", [" << reg[a] << "+" << reg[b] << ((c < 0) ? "-" : "+"));
-
-				if (c < 0)
-					c = -c;
-
-				DUMP(f, c << ";\t");
-				DUMP(f_asm, c << "]");
+				DUMP(f, "\tr" << a << " += " << 'r' << b << " + ");
+				DUMP(f_asm, "\tadd\t" << reg64[a] << ", " << reg64[b] << "\n");
+				DUMP(f_asm, "\tadd\t" << reg64[a] << ", " << inst.C);
+				DUMP(f, inst.C << "U;\t");
 			}
 			break;
 
 		case SUB:
 			DUMP(f, "\tr" << a << " -= " << 'r' << b << ";\t");
-			DUMP(f_asm, "\tsub\t" << reg[a] << ", " << reg[b]);
+			DUMP(f_asm, "\tsub\t" << reg64[a] << ", " << reg64[b]);
 			break;
 
 		case ROR:
@@ -91,11 +94,11 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 
 			if (b != prev_rot_src)
 			{
-				DUMP(f_asm, "\tmov\tecx, " << reg32[b] << "\n");
+				DUMP(f_asm, "\tmov\trcx, " << reg64[b] << "\n");
 				prev_rot_src = b;
 
-				const uint8_t* p1 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i]];
-				const uint8_t* p2 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i] + 1];
+				const uint8_t* p1 = (const uint8_t*)instructions_mov[c];
+				const uint8_t* p2 = (const uint8_t*)instructions_mov[c + 1];
 				machine_code.insert(machine_code.end(), p1, p2);
 			}
 			DUMP(f_asm, "\tror\t" << reg[a] << ", cl");
@@ -110,11 +113,11 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 
 			if (b != prev_rot_src)
 			{
-				DUMP(f_asm, "\tmov\tecx, " << reg32[b] << "\n");
+				DUMP(f_asm, "\tmov\trcx, " << reg64[b] << "\n");
 				prev_rot_src = b;
 
-				const uint8_t* p1 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i]];
-				const uint8_t* p2 = (const uint8_t*)instructions_mov[((uint8_t*)code)[i] + 1];
+				const uint8_t* p1 = (const uint8_t*)instructions_mov[c];
+				const uint8_t* p2 = (const uint8_t*)instructions_mov[c + 1];
 				machine_code.insert(machine_code.end(), p1, p2);
 			}
 			DUMP(f_asm, "\trol\t" << reg[a] << ", cl");
@@ -122,7 +125,7 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 
 		case XOR:
 			DUMP(f, "\tr" << a << " ^= " << 'r' << b << ";\t");
-			DUMP(f_asm, "\txor\t" << reg[a] << ", " << reg[b]);
+			DUMP(f_asm, "\txor\t" << reg64[a] << ", " << reg64[b]);
 			break;
 		}
 
@@ -134,13 +137,13 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 			prev_rot_src = (uint32_t)(-1);
 		}
 
-		const uint8_t* p1 = (const uint8_t*)instructions[((uint8_t*)code)[i]];
-		const uint8_t* p2 = (const uint8_t*)instructions[((uint8_t*)code)[i] + 1];
+		const uint8_t* p1 = (const uint8_t*)instructions[c];
+		const uint8_t* p2 = (const uint8_t*)instructions[c + 1];
 		machine_code.insert(machine_code.end(), p1, p2);
 		if (inst.opcode == ADD)
 		{
-			++i;
-			machine_code.back() = ((uint8_t*)code)[i];
+			machine_code.resize(machine_code.size() - sizeof(uint32_t));
+			machine_code.insert(machine_code.end(), (uint8_t*)&inst.C, ((uint8_t*)&inst.C) + sizeof(uint32_t));
 		}
 	}
 
@@ -159,19 +162,30 @@ void compile_code(const V4_Instruction* code, int code_size, std::vector<uint8_t
 	f_bin.write((const char*)machine_code.data(), machine_code.size());
 	f_bin.close();
 #endif
+
+	return num_insts;
 }
 
-static inline void insert_instructions(const V4_Instruction* code, int code_size, std::vector<uint8_t>& machine_code)
+static inline void insert_instructions(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 {
     uint32_t prev_rot_src = (uint32_t)(-1);
 
-    for (int i = 0; i < code_size; ++i)
+    for (int i = 0;; ++i)
     {
         const V4_Instruction inst = code[i];
+		if (inst.opcode == RET)
+		{
+			break;
+		}
+
+		V4_InstructionCompact op;
+		op.opcode = (inst.opcode == MUL) ? inst.opcode : (inst.opcode + 2);
+		op.dst_index = inst.dst_index;
+		op.src_index = inst.src_index;
 
         const uint32_t a = inst.dst_index;
         const uint32_t b = inst.src_index;
-        const uint8_t c = reinterpret_cast<const uint8_t*>(code)[i];
+        const uint8_t c = *reinterpret_cast<const uint8_t*>(&op);
 
         switch (inst.opcode)
         {
@@ -198,19 +212,19 @@ static inline void insert_instructions(const V4_Instruction* code, int code_size
         machine_code.insert(machine_code.end(), p1, p2);
         if (inst.opcode == ADD)
         {
-            ++i;
-            machine_code.back() = reinterpret_cast<const uint8_t*>(code)[i];
-        }
+			machine_code.resize(machine_code.size() - sizeof(uint32_t));
+			machine_code.insert(machine_code.end(), (uint8_t*)&inst.C, ((uint8_t*)&inst.C) + sizeof(uint32_t));
+		}
     }
 }
 
-void compile_code_double(const V4_Instruction* code, int code_size, std::vector<uint8_t>& machine_code)
+void compile_code_double(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 {
     machine_code.clear();
     machine_code.insert(machine_code.end(), (const uint8_t*)CryptonightR_template_double_part1, (const uint8_t*)CryptonightR_template_double_part2);
-    insert_instructions(code, code_size, machine_code);
+    insert_instructions(code, machine_code);
     machine_code.insert(machine_code.end(), (const uint8_t*)CryptonightR_template_double_part2, (const uint8_t*)CryptonightR_template_double_part3);
-    insert_instructions(code, code_size, machine_code);
+    insert_instructions(code, machine_code);
     machine_code.insert(machine_code.end(), (const uint8_t*)CryptonightR_template_double_part3, (const uint8_t*)CryptonightR_template_double_part4);
     *(int*)(machine_code.data() + machine_code.size() - 4) = static_cast<int>((((const uint8_t*)CryptonightR_template_double_mainloop) - ((const uint8_t*)CryptonightR_template_double_part1)) - machine_code.size());
     machine_code.insert(machine_code.end(), (const uint8_t*)CryptonightR_template_double_part4, (const uint8_t*)CryptonightR_template_double_end);
@@ -283,25 +297,25 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 	for (int i = 0; i <= 256; ++i)
 	{
 		f_asm << "CryptonightR_instruction" << i << ":\n";
-		const V4_Instruction inst = reinterpret_cast<V4_Instruction*>(&i)[0];
+		const V4_InstructionCompact inst = reinterpret_cast<V4_InstructionCompact*>(&i)[0];
 
+		const uint8_t opcode = (inst.opcode <= 2) ? MUL : (inst.opcode - 2);
 		const uint32_t a = inst.dst_index;
 		const uint32_t b = inst.src_index;
 
-		switch (inst.opcode)
+		switch (opcode)
 		{
-		case MUL1:
-		case MUL2:
-		case MUL3:
-			f_asm << "\timul\t" << reg[a] << ", " << reg[b];
+		case MUL:
+			f_asm << "\timul\t" << reg64[a] << ", " << reg64[b];
 			break;
 
 		case ADD:
-			f_asm << "\tlea\t" << reg[a] << ", [" << reg[a] << "+" << reg[b] << "+1]";
+			f_asm << "\tadd\t" << reg64[a] << ", " << reg64[b] << "\n";
+			f_asm << "\tadd\t" << reg64[a] << ", 80000000h";
 			break;
 
 		case SUB:
-			f_asm << "\tsub\t" << reg[a] << ", " << reg[b];
+			f_asm << "\tsub\t" << reg64[a] << ", " << reg64[b];
 			break;
 
 		case ROR:
@@ -313,7 +327,7 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 			break;
 
 		case XOR:
-			f_asm << "\txor\t" << reg[a] << ", " << reg[b];
+			f_asm << "\txor\t" << reg64[a] << ", " << reg64[b];
 			break;
 		}
 		f_asm << "\n";
@@ -322,15 +336,16 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 	for (int i = 0; i <= 256; ++i)
 	{
 		f_asm << "CryptonightR_instruction_mov" << i << ":\n";
-		const V4_Instruction inst = reinterpret_cast<V4_Instruction*>(&i)[0];
+		const V4_InstructionCompact inst = reinterpret_cast<V4_InstructionCompact*>(&i)[0];
 
+		const uint8_t opcode = (inst.opcode <= 2) ? MUL : (inst.opcode - 2);
 		const uint32_t b = inst.src_index;
 
-		switch (inst.opcode)
+		switch (opcode)
 		{
 		case ROR:
 		case ROL:
-			f_asm << "\tmov\tecx, " << reg32[b];
+			f_asm << "\tmov\trcx, " << reg64[b];
 			break;
 		}
 		f_asm << "\n";
@@ -350,11 +365,11 @@ int main()
 #if DUMP_SOURCE_CODE
 	generate_asm_template();
 
-	V4_Instruction code[256];
-	int code_size = v4_random_math_init(code, RND_SEED);
+	V4_Instruction code[NUM_INSTRUCTIONS * 2];
+	v4_random_math_init(code, RND_SEED);
 
 	std::vector<uint8_t> machine_code;
-	compile_code(code, code_size, machine_code);
+	compile_code(code, machine_code);
 	return 0;
 #else
 	return CryptonightR_test();
