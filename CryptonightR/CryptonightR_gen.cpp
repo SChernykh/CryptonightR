@@ -75,7 +75,13 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 			{
 				DUMP(f, "\tr" << a << " += " << 'r' << b << " + ");
 				DUMP(f_asm, "\tadd\t" << reg64[a] << ", " << reg64[b] << "\n");
-				DUMP(f_asm, "\tadd\t" << reg64[a] << ", " << inst.C);
+#if RANDOM_MATH_64_BIT == 1
+                DUMP(f_asm, "\tmov\tecx, " << inst.C << "\n");
+                DUMP(f_asm, "\tadd\t" << reg64[a] << ", rcx");
+                prev_rot_src = (uint32_t)(-1);
+#else
+                DUMP(f_asm, "\tadd\t" << reg64[a] << ", " << inst.C);
+#endif
 				DUMP(f, inst.C << "U;\t");
 			}
 			break;
@@ -142,9 +148,13 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 		machine_code.insert(machine_code.end(), p1, p2);
 		if (inst.opcode == ADD)
 		{
-			machine_code.resize(machine_code.size() - sizeof(uint32_t));
-			machine_code.insert(machine_code.end(), (uint8_t*)&inst.C, ((uint8_t*)&inst.C) + sizeof(uint32_t));
-		}
+            uint32_t* p = reinterpret_cast<uint32_t*>(machine_code.data() + machine_code.size() - sizeof(uint32_t)
+#if RANDOM_MATH_64_BIT == 1
+                - 3
+#endif
+            );
+            *p = inst.C;
+        }
 	}
 
 	machine_code.insert(machine_code.end(), (const uint8_t*) CryptonightR_template_part2, (const uint8_t*) CryptonightR_template_part3);
@@ -212,8 +222,12 @@ static inline void insert_instructions(const V4_Instruction* code, std::vector<u
         machine_code.insert(machine_code.end(), p1, p2);
         if (inst.opcode == ADD)
         {
-			machine_code.resize(machine_code.size() - sizeof(uint32_t));
-			machine_code.insert(machine_code.end(), (uint8_t*)&inst.C, ((uint8_t*)&inst.C) + sizeof(uint32_t));
+            uint32_t* p = reinterpret_cast<uint32_t*>(machine_code.data() + machine_code.size() - sizeof(uint32_t)
+#if RANDOM_MATH_64_BIT == 1
+                - 3
+#endif
+                );
+            *p = inst.C;
 		}
     }
 }
@@ -310,8 +324,13 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 			break;
 
 		case ADD:
-			f_asm << "\tadd\t" << reg64[a] << ", " << reg64[b] << "\n";
+            f_asm << "\tadd\t" << reg64[a] << ", " << reg64[b] << "\n";
+#if RANDOM_MATH_64_BIT == 1
+            f_asm << "\tmov ecx, 80000000h\n";
+            f_asm << "\tadd\t" << reg64[a] << ", rcx";
+#else
 			f_asm << "\tadd\t" << reg64[a] << ", 80000000h";
+#endif
 			break;
 
 		case SUB:
