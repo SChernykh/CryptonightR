@@ -75,4 +75,4 @@ ASIC with on-chip memory will get 2.5-3.75 times slower due to increased math la
 
 ### Further development plans
 
-- Public testing: [first round is over](https://github.com/SChernykh/CryptonightR/issues/2#issuecomment-453193397), second round will start on January 14th, 2019
+- Public testing: [first round is over](https://github.com/SChernykh/CryptonightR/issues/2#issuecomment-453193397), second round is [ongoing](https://github.com/SChernykh/CryptonightR/issues/5)
