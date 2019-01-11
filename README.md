@@ -56,7 +56,7 @@ SUB, XOR are never executed with the same operands to prevent degradation to zer
 
 Code generator ensures that minimal required latency for ASIC to execute random math is at least **2.5 times higher** than what was needed for DIV+SQRT in CryptonightV2: current settings ensure latency equivalent to a chain of 15 multiplications while optimal ASIC implementation of DIV+SQRT has latency equivalent to a chain of 6 multiplications.
 
-A number of simple checks is implemented to prevent algorithmic optimizations of the generated code. Current instruction mix also helps to prevent algebraic optimizations of the code. My tests show that generated C++ code compiled with all optimizations on is only 5% faster on average than direct translation to x86 machine code.
+A number of simple checks is implemented to prevent algorithmic optimizations of the generated code. Current instruction mix also helps to prevent algebraic optimizations of the code. My tests show that generated C++ code compiled with all optimizations on is only 5% faster on average than direct translation to x86 machine code - this is synthetic test with only random math in the loop, but the actual Cryptonight loop is still dominated by memory access, so these possible optimizations are only needed to estimate possible gains ASIC.
 
 It also accounts for super-scalar and out of order CPUs which can execute more than 1 instruction per clock cycle. If ASIC implements random math circuit as simple in-order pipeline, it'll be hit with **further 1.5x slowdown**.
 
