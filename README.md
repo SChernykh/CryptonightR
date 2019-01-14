@@ -1,6 +1,6 @@
 # CryptonightR 
 
-This is proof of concept repository. It introduces random integer math into CryptonightV2 main loop.
+This is proof of concept repository and a proposal for the next Monero PoW. It introduces random integer math into CryptonightV2 main loop.
 
 ### Random integer math modification
 
@@ -19,7 +19,7 @@ Program size is between 60 and 69 instructions, 63 instructions on average.
 
 There are 8 registers named R0-R7. Registers R0-R3 are variable, registers R4-R7 are constant and can only be used as source register in each instruction. Registers R4-R7 are initialized with values from main loop registers on every main loop iteration.
 
-All registers are 32 bit to enable efficient GPU implementation.
+All registers are 32 bit to enable efficient GPU implementation. It's possible to make registers 64 bit though - it's supported in miners below.
 
 The random sequence changes every block. Block height is used as a seed for random number generator. This allows CPU/GPU miners to precompile optimized code for each block. It also allows to verify optimized code for all future blocks against reference implementation, so it'll be guaranteed safe to use in Monero daemon/wallet software.
 
@@ -56,7 +56,7 @@ SUB, XOR are never executed with the same operands to prevent degradation to zer
 
 Code generator ensures that minimal required latency for ASIC to execute random math is at least **2.5 times higher** than what was needed for DIV+SQRT in CryptonightV2: current settings ensure latency equivalent to a chain of 15 multiplications while optimal ASIC implementation of DIV+SQRT has latency equivalent to a chain of 6 multiplications.
 
-It also accounts for super-scalar and out of order CPUs which can execute more than 1 instruction per clock cycle. If ASIC implements random math circuit as simple in-order pipeline, it'll be hit with **further 1.5x slowdown**.
+It also accounts for super-scalar and out of order CPUs which can execute more than 1 instruction per clock cycle. If ASIC implements random math circuit as simple in-order pipeline, it'll be hit with **further up to 1.5x slowdown**.
 
 A number of simple checks is implemented to prevent algorithmic optimizations of the generated code. Current instruction mix also helps to prevent algebraic optimizations of the code. My tests show that generated C++ code compiled with all optimizations on is only 5% faster on average than direct translation to x86 machine code - this is synthetic test with just random math in the loop, but the actual Cryptonight loop is still dominated by memory access, so this number is needed to estimate the limits of possible gains for ASIC.
 
