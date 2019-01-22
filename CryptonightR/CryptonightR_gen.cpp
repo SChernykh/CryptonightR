@@ -30,11 +30,15 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 #define DUMP(x, ...) x << __VA_ARGS__
 
 	std::ofstream f("random_math.inl");
+	std::ofstream f_double("random_math_double.inl");
 	std::ofstream f_asm("random_math.inc");
 	DUMP(f, "// Auto-generated file, do not edit\n\n");
+	DUMP(f_double, "// Auto-generated file, do not edit\n\n");
 	DUMP(f_asm, "; Auto-generated file, do not edit\n\n");
 	DUMP(f, "FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, const v4_reg r4, const v4_reg r5, const v4_reg r6, const v4_reg r7)\n");
 	DUMP(f, "{\n");
+	DUMP(f_double, "FORCEINLINE void random_math_double(__m128i& r0, __m128i& r1, __m128i& r2, __m128i& r3, const __m128i r4, const __m128i r5, const __m128i r6, const __m128i r7)\n");
+	DUMP(f_double, "{\n");
 #else
 #define DUMP(x, ...)
 #endif
@@ -68,12 +72,14 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 		{
 		case MUL:
 			DUMP(f, "\tr" << a << " *= " << 'r' << b << ";\t");
+			DUMP(f_double, "\tr" << a << " = _mm_mul_epu32(r" << a << ", r" << b << ");\t");
 			DUMP(f_asm, "\timul\t" << reg64[a] << ", " << reg64[b]);
 			break;
 
 		case ADD:
 			{
 				DUMP(f, "\tr" << a << " += " << 'r' << b << " + ");
+				DUMP(f_double, "\tr" << a << " = _mm_add_epi32(_mm_add_epi32(r" << a << ", r" << b << "), _mm_shuffle_epi32(_mm_cvtsi32_si128(" << static_cast<int32_t>(inst.C) << "), _MM_SHUFFLE(1, 0, 1, 0)));\t");
 				DUMP(f_asm, "\tadd\t" << reg64[a] << ", " << reg64[b] << "\n");
 #if RANDOM_MATH_64_BIT == 1
                 DUMP(f_asm, "\tmov\tecx, " << inst.C << "\n");
@@ -88,6 +94,7 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 
 		case SUB:
 			DUMP(f, "\tr" << a << " -= " << 'r' << b << ";\t");
+			DUMP(f_double, "\tr" << a << " = _mm_sub_epi32(r" << a << ", r" << b << ");\t");
 			DUMP(f_asm, "\tsub\t" << reg64[a] << ", " << reg64[b]);
 			break;
 
@@ -96,6 +103,11 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 			DUMP(f, "\tr" << a << " = _rotr64(r" << a << ", r" << b << ");");
 #else
 			DUMP(f, "\tr" << a << " = _rotr(r" << a << ", r" << b << ");");
+			DUMP(f_double, "\t{\n\
+\t\tconst uint32_t c[2] = { _mm_cvtsi128_si32(r" << b << "), _mm_extract_epi32(r" << b << ", 2) };\n\
+\t\tconst uint32_t d[2] = { _mm_cvtsi128_si32(r" << a << "), _mm_extract_epi32(r" << a << ", 2) };\n\
+\t\tr" << a << " = _mm_insert_epi32(_mm_cvtsi32_si128(_rotr(d[0], c[0])), _rotr(d[1], c[1]), 2);\n\
+\t}");
 #endif
 
 			if (b != prev_rot_src)
@@ -115,6 +127,11 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 			DUMP(f, "\tr" << a << " = _rotl64(r" << a << ", r" << b << ");");
 #else
 			DUMP(f, "\tr" << a << " = _rotl(r" << a << ", r" << b << ");");
+			DUMP(f_double, "\t{\n\
+\t\tconst uint32_t c[2] = { _mm_cvtsi128_si32(r" << b << "), _mm_extract_epi32(r" << b << ", 2) };\n\
+\t\tconst uint32_t d[2] = { _mm_cvtsi128_si32(r" << a << "), _mm_extract_epi32(r" << a << ", 2) };\n\
+\t\tr" << a << " = _mm_insert_epi32(_mm_cvtsi32_si128(_rotl(d[0], c[0])), _rotl(d[1], c[1]), 2);\n\
+\t}");
 #endif
 
 			if (b != prev_rot_src)
@@ -131,11 +148,13 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 
 		case XOR:
 			DUMP(f, "\tr" << a << " ^= " << 'r' << b << ";\t");
+			DUMP(f_double, "\tr" << a << " = _mm_xor_si128(r" << a << ", r" << b << ");\t");
 			DUMP(f_asm, "\txor\t" << reg64[a] << ", " << reg64[b]);
 			break;
 		}
 
 		DUMP(f, "\n");
+		DUMP(f_double, "\n");
 		DUMP(f_asm, "\n");
 
 		if (a == prev_rot_src)
@@ -165,7 +184,9 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 
 #if DUMP_SOURCE_CODE
 	f << "}\n";
+	f_double << "}\n";
 	f.close();
+	f_double.close();
 	f_asm.close();
 
 	std::ofstream f_bin("random_math.bin", std::ios::out | std::ios::binary);

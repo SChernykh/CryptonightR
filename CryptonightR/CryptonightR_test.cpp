@@ -516,6 +516,150 @@ void CryptonightR_double(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 	}
 }
 
+#include "random_math_double.inl"
+
+void CryptonightR_double_SSE(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
+{
+	uint8_t* l0 = ctx0->long_state;
+	uint64_t* h0 = (uint64_t*)ctx0->hash_state;
+	uint8_t* l1 = ctx1->long_state;
+	uint64_t* h1 = (uint64_t*)ctx1->hash_state;
+
+	uint64_t axl0 = h0[0] ^ h0[4];
+	uint64_t axh0 = h0[1] ^ h0[5];
+	__m128i bx00 = _mm_set_epi64x(h0[3] ^ h0[7], h0[2] ^ h0[6]);
+	__m128i bx01 = _mm_set_epi64x(h0[9] ^ h0[11], h0[8] ^ h0[10]);
+	uint64_t axl1 = h1[0] ^ h1[4];
+	uint64_t axh1 = h1[1] ^ h1[5];
+	__m128i bx10 = _mm_set_epi64x(h1[3] ^ h1[7], h1[2] ^ h1[6]);
+	__m128i bx11 = _mm_set_epi64x(h1[9] ^ h1[11], h1[8] ^ h1[10]);
+
+	uint64_t idx00 = h0[0] ^ h0[4];
+	uint64_t idx10 = h1[0] ^ h1[4];
+	uint32_t idx01 = idx00 & 0x1FFFF0;
+	uint32_t idx11 = idx10 & 0x1FFFF0;
+
+	v4_reg* data0 = reinterpret_cast<v4_reg*>(h0 + 12);
+	v4_reg* data1 = reinterpret_cast<v4_reg*>(h1 + 12);
+
+	__m128i r0 = _mm_set_epi32(0, data1[0], 0, data0[0]);
+	__m128i r1 = _mm_set_epi32(0, data1[1], 0, data0[1]);
+	__m128i r2 = _mm_set_epi32(0, data1[2], 0, data0[2]);
+	__m128i r3 = _mm_set_epi32(0, data1[3], 0, data0[3]);
+
+	for (size_t i = 0; i < 524288; i++)
+	{
+		__m128i cx0 = _mm_load_si128((__m128i *)&l0[idx01]);
+		const __m128i ax0 = _mm_set_epi64x(axh0, axl0);
+		cx0 = _mm_aesenc_si128(cx0, ax0);
+
+		{
+			uint32_t k = idx01 ^ 0x10;
+			const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[k]); k ^= 0x30;
+			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
+			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
+			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
+			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
+			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
+		}
+
+		_mm_store_si128((__m128i *)&l0[idx01], _mm_xor_si128(bx00, cx0));
+
+		idx00 = _mm_cvtsi128_si64(cx0);
+		idx01 = idx00 & 0x1FFFF0;
+
+		__m128i cx1 = _mm_load_si128((__m128i *)&l1[idx11]);
+		const __m128i ax1 = _mm_set_epi64x(axh1, axl1);
+		cx1 = _mm_aesenc_si128(cx1, ax1);
+
+		{
+			uint32_t k = idx11 ^ 0x10;
+			const __m128i chunk1 = _mm_load_si128((__m128i *)&l1[k]); k ^= 0x30;
+			const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
+			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
+			const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
+			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
+			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
+		}
+
+		_mm_store_si128((__m128i *)&l1[idx11], _mm_xor_si128(bx10, cx1));
+
+		idx10 = _mm_cvtsi128_si64(cx1);
+		idx11 = idx10 & 0x1FFFF0;
+
+		uint64_t hi, lo, cl, ch;
+		cl = ((uint64_t*)&l0[idx01])[0];
+		ch = ((uint64_t*)&l0[idx01])[1];
+
+		const __m128i random_math_result = _mm_or_si128(_mm_and_si128(_mm_add_epi32(r0, r1), _mm_set_epi64x(0xFFFFFFFFLL, 0xFFFFFFFFLL)), _mm_slli_epi64(_mm_add_epi32(r2, r3), 32));
+		cl ^= static_cast<uint64_t>(_mm_cvtsi128_si64(random_math_result));
+		{
+			const __m128i r4 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(ax0), _mm_castsi128_ps(ax1)));
+			const __m128i r5 = _mm_castps_si128(_mm_movehl_ps(_mm_castsi128_ps(ax1), _mm_castsi128_ps(ax0)));
+			const __m128i r6 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(bx00), _mm_castsi128_ps(bx10)));
+			const __m128i r7 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(bx01), _mm_castsi128_ps(bx11)));
+			random_math_double(r0, r1, r2, r3, r4, r5, r6, r7);
+		}
+
+		lo = _umul128(idx00, cl, &hi);
+
+		{
+			uint32_t k = idx01 ^ 0x10;
+			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l0[k]), _mm_set_epi64x(lo, hi)); k ^= 0x30;
+			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
+			hi ^= ((uint64_t*)&l0[k])[0];
+			lo ^= ((uint64_t*)&l0[k])[1];
+			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
+			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
+			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
+			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
+		}
+
+		axl0 += hi;
+		axh0 += lo;
+		((uint64_t*)&l0[idx01])[0] = axl0;
+		((uint64_t*)&l0[idx01])[1] = axh0;
+		axh0 ^= ch;
+		axl0 ^= cl;
+		idx00 = axl0;
+		idx01 = idx00 & 0x1FFFF0;
+
+		cl = ((uint64_t*)&l1[idx11])[0];
+		ch = ((uint64_t*)&l1[idx11])[1];
+
+		cl ^= static_cast<uint64_t>(_mm_cvtsi128_si64(_mm_srli_si128(random_math_result, 8)));
+
+		lo = _umul128(idx10, cl, &hi);
+
+		{
+			uint32_t k = idx11 ^ 0x10;
+			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l1[k]), _mm_set_epi64x(lo, hi)); k ^= 0x30;
+			const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
+			hi ^= ((uint64_t*)&l1[k])[0];
+			lo ^= ((uint64_t*)&l1[k])[1];
+			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
+			const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
+			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
+			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
+		}
+
+		axl1 += hi;
+		axh1 += lo;
+		((uint64_t*)&l1[idx11])[0] = axl1;
+		((uint64_t*)&l1[idx11])[1] = axh1;
+		((uint64_t*)&l1[idx11])[1] = axh1;
+		axh1 ^= ch;
+		axl1 ^= cl;
+		idx10 = axl1;
+		idx11 = idx10 & 0x1FFFF0;
+
+		bx01 = bx00;
+		bx11 = bx10;
+		bx00 = cx0;
+		bx10 = cx1;
+	}
+}
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -652,41 +796,41 @@ int CryptonightR_test()
 
 	V4_Instruction code[1024];
 
-	int max_code_size = 0;
-	int max_height = 0;
-	uint64_t inst_count[V4_INSTRUCTION_COUNT] = {};
-	int prog_count[128] = {};
-	uint64_t total_inst_count = 0;
-	for (int i = 0; i < 10000000; ++i)
-	{
-		int code_size = v4_random_math_init(code, i);
-		++prog_count[code_size];
-		if (code_size > max_code_size)
-		{
-			max_code_size = code_size;
-			max_height = i;
-		}
-		for (int j = 0; code[j].opcode != RET; ++j)
-		{
-			++inst_count[code[j].opcode];
-			++total_inst_count;
-		}
-	}
-	printf("max code size = %d for height %d\n", max_code_size, max_height);
-	printf("MUL %.2f%%\n", static_cast<double>(inst_count[MUL]) * 100.0 / total_inst_count);
-	printf("ADD %.2f%%\n", static_cast<double>(inst_count[ADD]) * 100.0 / total_inst_count);
-	printf("SUB %.2f%%\n", static_cast<double>(inst_count[SUB]) * 100.0 / total_inst_count);
-	printf("ROR %.2f%%\n", static_cast<double>(inst_count[ROR]) * 100.0 / total_inst_count);
-	printf("ROL %.2f%%\n", static_cast<double>(inst_count[ROL]) * 100.0 / total_inst_count);
-	printf("XOR %.2f%%\n", static_cast<double>(inst_count[XOR]) * 100.0 / total_inst_count);
-	for (int i = 0; i < 128; ++i)
-	{
-		if (prog_count[i] > 0)
-		{
-			printf("%d\t%d\n", i, prog_count[i]);
-		}
-	}
-	printf("Average length: %.6f\n", total_inst_count / 1e7);
+	//int max_code_size = 0;
+	//int max_height = 0;
+	//uint64_t inst_count[V4_INSTRUCTION_COUNT] = {};
+	//int prog_count[128] = {};
+	//uint64_t total_inst_count = 0;
+	//for (int i = 0; i < 10000000; ++i)
+	//{
+	//	int code_size = v4_random_math_init(code, i);
+	//	++prog_count[code_size];
+	//	if (code_size > max_code_size)
+	//	{
+	//		max_code_size = code_size;
+	//		max_height = i;
+	//	}
+	//	for (int j = 0; code[j].opcode != RET; ++j)
+	//	{
+	//		++inst_count[code[j].opcode];
+	//		++total_inst_count;
+	//	}
+	//}
+	//printf("max code size = %d for height %d\n", max_code_size, max_height);
+	//printf("MUL %.2f%%\n", static_cast<double>(inst_count[MUL]) * 100.0 / total_inst_count);
+	//printf("ADD %.2f%%\n", static_cast<double>(inst_count[ADD]) * 100.0 / total_inst_count);
+	//printf("SUB %.2f%%\n", static_cast<double>(inst_count[SUB]) * 100.0 / total_inst_count);
+	//printf("ROR %.2f%%\n", static_cast<double>(inst_count[ROR]) * 100.0 / total_inst_count);
+	//printf("ROL %.2f%%\n", static_cast<double>(inst_count[ROL]) * 100.0 / total_inst_count);
+	//printf("XOR %.2f%%\n", static_cast<double>(inst_count[XOR]) * 100.0 / total_inst_count);
+	//for (int i = 0; i < 128; ++i)
+	//{
+	//	if (prog_count[i] > 0)
+	//	{
+	//		printf("%d\t%d\n", i, prog_count[i]);
+	//	}
+	//}
+	//printf("Average length: %.6f\n", total_inst_count / 1e7);
 
 	v4_random_math_init(code, RND_SEED);
 	std::vector<uint8_t> machine_code, machine_code_double;
@@ -710,7 +854,16 @@ int CryptonightR_test()
 		return 2;
 	}
 
-    init_ctx(ctx[2], 0);
+	init_ctx(ctx[2], 0);
+	init_ctx(ctx[3], 1);
+	CryptonightR_double_SSE(ctx[2], ctx[3]);
+	if ((memcmp(ctx[0]->long_state, ctx[2]->long_state, MEMORY) != 0) || (memcmp(ctx[1]->long_state, ctx[3]->long_state, MEMORY) != 0))
+	{
+		std::cerr << "C++ SSE code (double) doesn't match reference code" << std::endl;
+		return 2;
+	}
+
+	init_ctx(ctx[2], 0);
     init_ctx(ctx[3], 1);
     CryptonightR_double_asm(ctx[2], ctx[3]);
     if ((memcmp(ctx[0]->long_state, ctx[2]->long_state, MEMORY) != 0) || (memcmp(ctx[1]->long_state, ctx[3]->long_state, MEMORY) != 0))
@@ -761,6 +914,7 @@ int CryptonightR_test()
 
 	benchmark(CryptonightR_double_ref, "CryptonightR_double (reference code)", ctx[0], ctx[1], code);
     benchmark(CryptonightR_double, "CryptonightR_double (C++ code)", ctx[0], ctx[1]);
+	benchmark(CryptonightR_double_SSE, "CryptonightR_double (C++ SSE code)", ctx[0], ctx[1]);
 	benchmark(CryptonightR_double_asm, "CryptonightR_double (ASM code)", ctx[0], ctx[1]);
     benchmark(CryptonightR_double_generated, "CryptonightR_double (generated machine code)", ctx[0], ctx[1]);
     benchmark(cnv2_double_mainloop_sandybridge_asm, "CryptonightV2_double", ctx[0], ctx[1]);

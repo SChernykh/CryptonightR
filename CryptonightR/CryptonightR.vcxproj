@@ -107,6 +107,7 @@
     <None Include="CryptonightR_template.inc" />
     <None Include="random_math.inc" />
     <None Include="random_math.inl" />
+    <None Include="random_math_double.inl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CryptonightR_template.h" />
