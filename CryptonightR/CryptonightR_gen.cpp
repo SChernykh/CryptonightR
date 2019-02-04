@@ -249,7 +249,10 @@ static inline void insert_instructions(const V4_Instruction* code, std::vector<u
 #endif
                 );
             *p = inst.C;
-		}
+#if RANDOM_MATH_64_BIT == 1
+            prev_rot_src = (uint32_t)(-1);
+#endif
+        }
     }
 }
 
