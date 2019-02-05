@@ -28,7 +28,7 @@ Reference implementation (variant4 code in the following files):
 - https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/slow-hash.c
 
 Reference implementation in Monero code base:
-- https://github.com/SChernykh/monero/tree/CryptonightR
+- https://github.com/SChernykh/monero/tree/variant4-pr
 
 An example of generated random math:
 - https://github.com/SChernykh/CryptonightR/blob/master/CryptonightR/random_math.inl
