@@ -59,14 +59,13 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 			break;
 		}
 
-		V4_InstructionCompact op;
-		op.opcode = (inst.opcode == MUL) ? inst.opcode : (inst.opcode + 2);
-		op.dst_index = inst.dst_index;
-		op.src_index = inst.src_index;
+		const uint8_t opcode = (inst.opcode == MUL) ? inst.opcode : (inst.opcode + 2);
+		const uint8_t dst_index = inst.dst_index;
+		const uint8_t src_index = inst.src_index;
 
 		const uint32_t a = inst.dst_index;
 		const uint32_t b = inst.src_index;
-		const uint8_t c = *((uint8_t*)&op);
+		const uint8_t c = opcode | (dst_index << V4_OPCODE_BITS) | (src_index << (V4_OPCODE_BITS + V4_DST_INDEX_BITS));
 
 		switch (inst.opcode)
 		{
@@ -209,14 +208,11 @@ static inline void insert_instructions(const V4_Instruction* code, std::vector<u
 			break;
 		}
 
-		V4_InstructionCompact op;
-		op.opcode = (inst.opcode == MUL) ? inst.opcode : (inst.opcode + 2);
-		op.dst_index = inst.dst_index;
-		op.src_index = inst.src_index;
+        const uint8_t opcode = (inst.opcode == MUL) ? inst.opcode : (inst.opcode + 2);
 
         const uint32_t a = inst.dst_index;
         const uint32_t b = inst.src_index;
-        const uint8_t c = *reinterpret_cast<const uint8_t*>(&op);
+        const uint8_t c = opcode | (inst.dst_index << V4_OPCODE_BITS) | (inst.src_index << (V4_OPCODE_BITS + V4_DST_INDEX_BITS));
 
         switch (inst.opcode)
         {
@@ -335,11 +331,14 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 	for (int i = 0; i <= 256; ++i)
 	{
 		f_asm << "CryptonightR_instruction" << i << ":\n";
-		const V4_InstructionCompact inst = reinterpret_cast<V4_InstructionCompact*>(&i)[0];
 
-		const uint8_t opcode = (inst.opcode <= 2) ? MUL : (inst.opcode - 2);
-		const uint32_t a = inst.dst_index;
-		const uint32_t b = inst.src_index;
+		const uint8_t c = i;
+
+		uint8_t opcode = c & ((1 << V4_OPCODE_BITS) - 1);
+		opcode = (opcode <= 2) ? MUL : (opcode - 2);
+
+		const uint32_t a = (c >> V4_OPCODE_BITS) & ((1 << V4_DST_INDEX_BITS) - 1);
+		const uint32_t b = (c >> (V4_OPCODE_BITS + V4_DST_INDEX_BITS)) & ((1 << V4_SRC_INDEX_BITS) - 1);
 
 		switch (opcode)
 		{
@@ -379,10 +378,13 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 	for (int i = 0; i <= 256; ++i)
 	{
 		f_asm << "CryptonightR_instruction_mov" << i << ":\n";
-		const V4_InstructionCompact inst = reinterpret_cast<V4_InstructionCompact*>(&i)[0];
 
-		const uint8_t opcode = (inst.opcode <= 2) ? MUL : (inst.opcode - 2);
-		const uint32_t b = inst.src_index;
+		const uint8_t c = i;
+
+		uint8_t opcode = c & ((1 << V4_OPCODE_BITS) - 1);
+		opcode = (opcode <= 2) ? MUL : (opcode - 2);
+
+		const uint32_t b = (c >> (V4_OPCODE_BITS + V4_DST_INDEX_BITS)) & ((1 << V4_SRC_INDEX_BITS) - 1);
 
 		switch (opcode)
 		{
