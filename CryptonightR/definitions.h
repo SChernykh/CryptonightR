@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <memory.h>
 
+#define SWAP32LE(x) x
+#define SWAP64LE(x) x
 extern "C" void hash_extra_blake(const void *data, size_t length, char *hash);
 
 #include "../slow_hash_test/variant4_random_math.h"
