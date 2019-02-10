@@ -699,6 +699,9 @@ cryptonight_ctx* cryptonight_alloc_ctx()
 
 	ptr->long_state = (uint8_t*) VirtualAlloc(NULL, iLargePageMin, MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES, PAGE_READWRITE);
 
+    if (!ptr->long_state)
+        ptr->long_state = (uint8_t*)VirtualAlloc(NULL, iLargePageMin, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+
 	return ptr;
 }
 
