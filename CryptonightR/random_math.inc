@@ -16,10 +16,10 @@
 	xor	rbx, rdx
 	imul	rsi, rbp
 	xor	rbx, rsi
-	xor	rsi, r15
+	xor	rsi, r9
 	sub	rsi, rdx
 	imul	rbx, rbp
-	xor	rsi, r15
+	xor	rsi, r9
 	imul	rsi, rdi
 	imul	rbx, rax
 	mov	rcx, rdi
@@ -36,7 +36,7 @@
 	add	rdi, 739462159
 	xor	rbx, rdi
 	imul	rbx, rdx
-	xor	rbp, rdx
+	xor	rbp, r9
 	imul	rdi, rax
 	add	rdi, rsi
 	add	rdi, 4139483296
@@ -65,7 +65,7 @@
 	imul	rsi, rdi
 	imul	rbx, rsi
 	xor	rbp, rdx
-	xor	rdi, rax
+	xor	rdi, r9
 	imul	rdi, rax
 	mov	rcx, rsp
 	rol	edi, cl

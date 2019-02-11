@@ -111,9 +111,11 @@ ENDIF
 IF RANDOM_MATH_64_BIT
 	movq rax, xmm6
 	movq rdx, xmm7
+	pextrq r9, xmm7, 1
 ELSE
 	movd eax, xmm6
 	movd edx, xmm7
+	pextrd r9d, xmm7, 2
 ENDIF
 
 	INCLUDE random_math.inc
@@ -329,7 +331,8 @@ main_loop_double:
 	movq xmm11, rbp
 	movq xmm12, r15
 	movq xmm13, rdx
-	mov [rsp+112], rcx
+	mov [rsp+104], rcx
+	mov [rsp+112], r9
 
 IF RANDOM_MATH_64_BIT
 	mov rbx, QWORD PTR [rsp+32]
@@ -358,11 +361,13 @@ IF RANDOM_MATH_64_BIT
 	pextrq r15, xmm3, 1
 	movq rax, xmm7
 	movq rdx, xmm9
+	pextrq r9, xmm9, 1
 ELSE
 	movd esp, xmm3
 	pextrd r15d, xmm3, 2
 	movd eax, xmm7
 	movd edx, xmm9
+	pextrd r9d, xmm9, 2
 ENDIF
 
 	INCLUDE random_math.inc
@@ -385,7 +390,8 @@ ENDIF
 	movq rbp, xmm11
 	movq r15, xmm12
 	movq rdx, xmm13
-	mov rcx, [rsp+112]
+	mov rcx, [rsp+104]
+	mov r9, [rsp+112]
 	; Random math 1 end
 
 	mov rbx, r8
@@ -436,6 +442,7 @@ ENDIF
 	movq xmm12, rbp
 	movq xmm13, r15
 	mov [rsp+104], rcx
+	mov [rsp+112], r9
 
 IF RANDOM_MATH_64_BIT
 	mov rbx, QWORD PTR [rsp]
@@ -466,11 +473,13 @@ IF RANDOM_MATH_64_BIT
 	pextrq r15, xmm4, 1
 	movq rax, xmm8
 	movq rdx, xmm10
+	pextrq r9, xmm10, 1
 ELSE
 	movd esp, xmm4
 	pextrd r15d, xmm4, 2
 	movd eax, xmm8
 	movd edx, xmm10
+	pextrd r9d, xmm10, 2
 ENDIF
 
 	INCLUDE random_math.inc
@@ -494,6 +503,7 @@ ENDIF
 	movq rbp, xmm12
 	movq r15, xmm13
 	mov rcx, [rsp+104]
+	mov r9, [rsp+112]
 	; Random math 2 end
 
 	mov rax, r8

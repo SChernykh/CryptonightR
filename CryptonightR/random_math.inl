@@ -1,6 +1,6 @@
 // Auto-generated file, do not edit
 
-FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, const v4_reg r4, const v4_reg r5, const v4_reg r6, const v4_reg r7)
+FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, const v4_reg r4, const v4_reg r5, const v4_reg r6, const v4_reg r7, const v4_reg r8)
 {
 	r0 = _rotl(r0, r0);
 	r1 -= r5;	
@@ -14,10 +14,10 @@ FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, con
 	r0 ^= r7;	
 	r1 *= r3;	
 	r0 ^= r1;	
-	r1 ^= r5;	
+	r1 ^= r8;	
 	r1 -= r7;	
 	r0 *= r3;	
-	r1 ^= r5;	
+	r1 ^= r8;	
 	r1 *= r2;	
 	r0 *= r6;	
 	r3 = _rotr(r3, r2);
@@ -31,7 +31,7 @@ FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, con
 	r2 += r5 + 739462159U;	
 	r0 ^= r2;	
 	r0 *= r7;	
-	r3 ^= r7;	
+	r3 ^= r8;	
 	r2 *= r6;	
 	r2 += r1 + 4139483296U;	
 	r1 -= r2;	
@@ -58,7 +58,7 @@ FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, con
 	r1 *= r2;	
 	r0 *= r1;	
 	r3 ^= r7;	
-	r2 ^= r6;	
+	r2 ^= r8;	
 	r2 *= r6;	
 	r2 = _rotl(r2, r4);
 	r1 = _rotl(r1, r4);

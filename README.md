@@ -17,7 +17,7 @@ XOR|a^b|22.78%|b is always different from a
 
 Program size is between 60 and 69 instructions, 63 instructions on average.
 
-There are 8 registers named R0-R7. Registers R0-R3 are variable, registers R4-R7 are constant and can only be used as source register in each instruction. Registers R4-R7 are initialized with values from main loop registers on every main loop iteration.
+There are 9 registers named R0-R8. Registers R0-R3 are variable, registers R4-R8 are constant and can only be used as source register in each instruction. Registers R4-R8 are initialized with values from main loop registers on every main loop iteration.
 
 All registers are 32 bit to enable efficient GPU implementation. It's possible to make registers 64 bit though - it's supported in miners below.
 

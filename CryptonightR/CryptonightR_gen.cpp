@@ -10,14 +10,16 @@
 #include "CryptonightR_template.h"
 
 // Registers to use in generated x86-64 code
-static const char* reg32[8] = {
+static const char* reg32[9] = {
 	"ebx", "esi", "edi", "ebp",
-	"esp", "r15d", "eax", "edx"
+	"esp", "r15d", "eax", "edx",
+	"r9d"
 };
 
-static const char* reg64[8] = {
+static const char* reg64[9] = {
 	"rbx", "rsi", "rdi", "rbp",
-	"rsp", "r15", "rax", "rdx"
+	"rsp", "r15", "rax", "rdx",
+	"r9"
 };
 
 int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
@@ -35,9 +37,9 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 	DUMP(f, "// Auto-generated file, do not edit\n\n");
 	DUMP(f_double, "// Auto-generated file, do not edit\n\n");
 	DUMP(f_asm, "; Auto-generated file, do not edit\n\n");
-	DUMP(f, "FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, const v4_reg r4, const v4_reg r5, const v4_reg r6, const v4_reg r7)\n");
+	DUMP(f, "FORCEINLINE void random_math(v4_reg& r0, v4_reg& r1, v4_reg& r2, v4_reg& r3, const v4_reg r4, const v4_reg r5, const v4_reg r6, const v4_reg r7, const v4_reg r8)\n");
 	DUMP(f, "{\n");
-	DUMP(f_double, "FORCEINLINE void random_math_double(__m128i& r0, __m128i& r1, __m128i& r2, __m128i& r3, const __m128i r4, const __m128i r5, const __m128i r6, const __m128i r7)\n");
+	DUMP(f_double, "FORCEINLINE void random_math_double(__m128i& r0, __m128i& r1, __m128i& r2, __m128i& r3, const __m128i r4, const __m128i r5, const __m128i r6, const __m128i r7, const __m128i r8)\n");
 	DUMP(f_double, "{\n");
 #else
 #define DUMP(x, ...)
@@ -65,7 +67,7 @@ int compile_code(const V4_Instruction* code, std::vector<uint8_t>& machine_code)
 
 		const uint32_t a = inst.dst_index;
 		const uint32_t b = inst.src_index;
-		const uint8_t c = opcode | (dst_index << V4_OPCODE_BITS) | (src_index << (V4_OPCODE_BITS + V4_DST_INDEX_BITS));
+		const uint8_t c = opcode | (dst_index << V4_OPCODE_BITS) | (((src_index == 8) ? dst_index : src_index) << (V4_OPCODE_BITS + V4_DST_INDEX_BITS));
 
 		switch (inst.opcode)
 		{
@@ -212,7 +214,7 @@ static inline void insert_instructions(const V4_Instruction* code, std::vector<u
 
         const uint32_t a = inst.dst_index;
         const uint32_t b = inst.src_index;
-        const uint8_t c = opcode | (inst.dst_index << V4_OPCODE_BITS) | (inst.src_index << (V4_OPCODE_BITS + V4_DST_INDEX_BITS));
+        const uint8_t c = opcode | (inst.dst_index << V4_OPCODE_BITS) | (((inst.src_index == 8) ? inst.dst_index : inst.src_index) << (V4_OPCODE_BITS + V4_DST_INDEX_BITS));
 
         switch (inst.opcode)
         {
@@ -338,7 +340,11 @@ _TEXT_CN_TEMPLATE SEGMENT PAGE READ EXECUTE
 		opcode = (opcode <= 2) ? MUL : (opcode - 2);
 
 		const uint32_t a = (c >> V4_OPCODE_BITS) & ((1 << V4_DST_INDEX_BITS) - 1);
-		const uint32_t b = (c >> (V4_OPCODE_BITS + V4_DST_INDEX_BITS)) & ((1 << V4_SRC_INDEX_BITS) - 1);
+		uint32_t b = (c >> (V4_OPCODE_BITS + V4_DST_INDEX_BITS)) & ((1 << V4_SRC_INDEX_BITS) - 1);
+		if (((opcode == ADD) || (opcode == SUB) || (opcode == XOR)) && (a == b))
+		{
+			b = 8;
+		}
 
 		switch (opcode)
 		{
@@ -410,7 +416,7 @@ int main()
 #if DUMP_SOURCE_CODE
 	generate_asm_template();
 
-	V4_Instruction code[NUM_INSTRUCTIONS * 2];
+	V4_Instruction code[NUM_INSTRUCTIONS_MAX + 1];
 	v4_random_math_init(code, RND_SEED);
 
 	std::vector<uint8_t> machine_code;
