@@ -60,6 +60,16 @@ It also accounts for super-scalar and out of order CPUs which can execute more t
 
 A number of simple checks is implemented to prevent algorithmic optimizations of the generated code. Current instruction mix also helps to prevent algebraic optimizations of the code. My tests show that generated C++ code compiled with all optimizations on is only 5% faster on average than direct translation to x86 machine code - this is synthetic test with just random math in the loop, but the actual Cryptonight loop is still dominated by memory access, so this number is needed to estimate the limits of possible gains for ASIC.
 
+### The second tweak from @vtnerd
+
+* The values used in the first shuffle operation are now used to modify the selection of the second memory address.
+* The values used in the second shuffle operation are now used to modify the input to the next AES operation (next loop iteration).
+* The output (destination registers) of the random program are used in the writeback value of the second memory address and the memory address calculation for the next AES operation (next loop iteration).
+* Tweak2-2 was dropped.
+ 
+The operations done are fairly simple, but AFAIK cannot be optimized out. They enforce a stronger order of operations.
+
+
 ### Performance on CPU/GPU and ASIC
 
 CryptonightR parameters were chosen to:
@@ -73,6 +83,3 @@ ASIC will have to implement some simple and minimalistic instruction decoder and
 ASIC with external memory will have the same performance as they did on CryptonightV2, but they will require much more chip area to implement multiple CPU-like execution pipelines.
 ASIC with on-chip memory will get 2.5-3.75 times slower due to increased math latency and randomness and they will also require more chip area.
 
-### Further development plans
-
-- Public testing: [first round is over](https://github.com/SChernykh/CryptonightR/issues/2#issuecomment-453193397), second round is [ongoing](https://github.com/SChernykh/CryptonightR/issues/5)

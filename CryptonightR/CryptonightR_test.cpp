@@ -18,9 +18,9 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code)
 	uint64_t idx0 = h0[0] ^ h0[4];
 	uint64_t idx1 = idx0 & 0x1FFFF0;
 
-	// 8 registers for random math
+	// 9 registers for random math
 	// r0-r3 are variable
-	// r4-r7 are constants taken from main loop registers on every iteration
+	// r4-r8 are constants taken from main loop registers on every iteration
 	v4_reg r[9];
 	v4_reg* data = reinterpret_cast<v4_reg*>(h0 + 12);
 
@@ -36,7 +36,6 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code)
 
 		cx = _mm_aesenc_si128(cx, ax0);
 
-		// SHUFFLE1 from CryptonightV2
 		{
 			const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x10]);
 			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x20]);
@@ -44,6 +43,7 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code)
 			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x10], _mm_add_epi64(chunk3, bx1));
 			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x20], _mm_add_epi64(chunk1, bx0));
 			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x30], _mm_add_epi64(chunk2, ax0));
+            cx = _mm_xor_si128(_mm_xor_si128(cx, chunk3), _mm_xor_si128(chunk1, chunk2));
 		}
 
 		_mm_store_si128((__m128i *)&l0[idx1], _mm_xor_si128(bx0, cx));
@@ -55,7 +55,10 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code)
 		cl = ((uint64_t*)&l0[idx1])[0];
 		ch = ((uint64_t*)&l0[idx1])[1];
 
-		// Random math (replaces integer math from CryptonightV2)
+        uint64_t al0 = ax0.m128i_u64[0];
+        uint64_t ah0 = ax0.m128i_u64[1];
+        
+        // Random math (replaces integer math from CryptonightV2)
 #if RANDOM_MATH_64_BIT == 1
 		cl ^= (r[0] + r[1]) ^ (r[2] + r[3]);
 
@@ -65,7 +68,10 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code)
 		r[5] = static_cast<uint64_t>(_mm_cvtsi128_si64(_mm_srli_si128(ax0, 8)));
 		r[6] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx0));
 		r[7] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx1));
-		r[8] = static_cast<uint32_t>(_mm_extract_epi64(bx1, 1));
+		r[8] = static_cast<uint64_t>(_mm_extract_epi64(bx1, 1));
+        v4_random_math(code, r);
+        al0 ^= r[2] ^ r[3];
+        ah0 ^= r[0] ^ r[1];
 #else
 		cl ^= (r[0] + r[1]) | (static_cast<uint64_t>(r[2] + r[3]) << 32);
 
@@ -76,25 +82,25 @@ void CryptonightR_ref(cryptonight_ctx* ctx0, const V4_Instruction* code)
 		r[6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx0));
 		r[7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx1));
 		r[8] = static_cast<uint32_t>(_mm_extract_epi32(bx1, 2));
+        v4_random_math(code, r);
+        al0 ^= r[2] | ((uint64_t)(r[3]) << 32);
+        ah0 ^= r[0] | ((uint64_t)(r[1]) << 32);
 #endif
-		v4_random_math(code, r);
 
 		lo = _umul128(idx0, cl, &hi);
 
-		// SHUFFLE2 from CNv2
-		{
-			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l0[idx1 ^ 0x10]), _mm_set_epi64x(lo, hi));
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x20]);
-			hi ^= ((uint64_t*)&l0[idx1 ^ 0x20])[0];
-			lo ^= ((uint64_t*)&l0[idx1 ^ 0x20])[1];
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x30]);
-			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x10], _mm_add_epi64(chunk3, bx1));
-			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x20], _mm_add_epi64(chunk1, bx0));
-			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x30], _mm_add_epi64(chunk2, ax0));
-		}
+        {
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x10]);
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x20]);
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x30]);
+            _mm_store_si128((__m128i *)&l0[idx1 ^ 0x10], _mm_add_epi64(chunk3, bx1));
+            _mm_store_si128((__m128i *)&l0[idx1 ^ 0x20], _mm_add_epi64(chunk1, bx0));
+            _mm_store_si128((__m128i *)&l0[idx1 ^ 0x30], _mm_add_epi64(chunk2, ax0));
+            cx = _mm_xor_si128(_mm_xor_si128(cx, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
-		uint64_t al0 = ax0.m128i_u64[0] + hi;
-		uint64_t ah0 = ax0.m128i_u64[1] + lo;
+		al0 += hi;
+		ah0 += lo;
 		((uint64_t*)&l0[idx1])[0] = al0;
 		((uint64_t*)&l0[idx1])[1] = ah0;
 		ah0 ^= ch;
@@ -157,7 +163,8 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
 			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
 			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
-		}
+            cx0 = _mm_xor_si128(_mm_xor_si128(cx0, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		_mm_store_si128((__m128i *)&l0[idx01], _mm_xor_si128(bx00, cx0));
 
@@ -176,7 +183,8 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 			const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
 			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
 			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
-		}
+            cx1 = _mm_xor_si128(_mm_xor_si128(cx1, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		_mm_store_si128((__m128i *)&l1[idx11], _mm_xor_si128(bx10, cx1));
 
@@ -196,7 +204,10 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 		r[0][5] = static_cast<uint64_t>(_mm_cvtsi128_si64(_mm_srli_si128(ax0, 8)));
 		r[0][6] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx00));
 		r[0][7] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx01));
-		r[0][8] = static_cast<uint32_t>(_mm_extract_epi64(bx01, 1));
+		r[0][8] = static_cast<uint64_t>(_mm_extract_epi64(bx01, 1));
+        v4_random_math(code, r[0]);
+        axl0 ^= r[0][2] ^ r[0][3];
+        axh0 ^= r[0][0] ^ r[0][1];
 #else
 		cl ^= (r[0][0] + r[0][1]) | (static_cast<uint64_t>(r[0][2] + r[0][3]) << 32);
 
@@ -207,22 +218,23 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 		r[0][6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx00));
 		r[0][7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx01));
 		r[0][8] = static_cast<uint32_t>(_mm_extract_epi32(bx01, 2));
+        v4_random_math(code, r[0]);
+        axl0 ^= r[0][2] | ((uint64_t)(r[0][3]) << 32);
+        axh0 ^= r[0][0] | ((uint64_t)(r[0][1]) << 32);
 #endif
-		v4_random_math(code, r[0]);
 
 		lo = _umul128(idx00, cl, &hi);
 
-		{
-			uint32_t k = idx01 ^ 0x10;
-			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l0[k]), _mm_set_epi64x(lo, hi)); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
-			hi ^= ((uint64_t*)&l0[k])[0];
-			lo ^= ((uint64_t*)&l0[k])[1];
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
-		}
+        {
+            uint32_t k = idx01 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
+            cx0 = _mm_xor_si128(_mm_xor_si128(cx0, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		axl0 += hi;
 		axh0 += lo;
@@ -245,7 +257,10 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 		r[1][5] = static_cast<uint64_t>(_mm_cvtsi128_si64(_mm_srli_si128(ax1, 8)));
 		r[1][6] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx10));
 		r[1][7] = static_cast<uint64_t>(_mm_cvtsi128_si64(bx11));
-		r[1][8] = static_cast<uint32_t>(_mm_extract_epi64(bx11, 1));
+		r[1][8] = static_cast<uint64_t>(_mm_extract_epi64(bx11, 1));
+        v4_random_math(code, r[1]);
+        axl1 ^= r[1][2] ^ r[1][3];
+        axh1 ^= r[1][0] ^ r[1][1];
 #else
 		cl ^= (r[1][0] + r[1][1]) | (static_cast<uint64_t>(r[1][2] + r[1][3]) << 32);
 
@@ -256,22 +271,23 @@ void CryptonightR_double_ref(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1, const
 		r[1][6] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx10));
 		r[1][7] = static_cast<uint32_t>(_mm_cvtsi128_si32(bx11));
 		r[1][8] = static_cast<uint32_t>(_mm_extract_epi32(bx11, 2));
+        v4_random_math(code, r[1]);
+        axl1 ^= r[1][2] | ((uint64_t)(r[1][3]) << 32);
+        axh1 ^= r[1][0] | ((uint64_t)(r[1][1]) << 32);
 #endif
-		v4_random_math(code, r[1]);
 
 		lo = _umul128(idx10, cl, &hi);
 
-		{
-			uint32_t k = idx11 ^ 0x10;
-			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l1[k]), _mm_set_epi64x(lo, hi)); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
-			hi ^= ((uint64_t*)&l1[k])[0];
-			lo ^= ((uint64_t*)&l1[k])[1];
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
-		}
+        {
+            uint32_t k = idx11 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l1[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
+            cx1 = _mm_xor_si128(_mm_xor_si128(cx1, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		axl1 += hi;
 		axh1 += lo;
@@ -324,7 +340,8 @@ void CryptonightR(cryptonight_ctx* ctx0)
 			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x10], _mm_add_epi64(chunk3, bx1));
 			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x20], _mm_add_epi64(chunk1, bx0));
 			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x30], _mm_add_epi64(chunk2, ax0));
-		}
+            cx = _mm_xor_si128(_mm_xor_si128(cx, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		_mm_store_si128((__m128i *)&l0[idx1], _mm_xor_si128(bx0, cx));
 
@@ -335,29 +352,35 @@ void CryptonightR(cryptonight_ctx* ctx0)
 		cl = ((uint64_t*)&l0[idx1])[0];
 		ch = ((uint64_t*)&l0[idx1])[1];
 
+        uint64_t al0 = ax0.m128i_u64[0];
+        uint64_t ah0 = ax0.m128i_u64[1];
+
 #if RANDOM_MATH_64_BIT == 1
 		cl ^= (r0 + r1) ^ (r2 + r3);
 		random_math(r0, r1, r2, r3, ax0.m128i_u64[0], ax0.m128i_u64[1], bx0.m128i_u64[0], bx1.m128i_u64[0], bx1.m128i_u64[1]);
+        al0 ^= r2 ^ r3;
+        ah0 ^= r0 ^ r1;
 #else
 		cl ^= (r0 + r1) | (static_cast<uint64_t>(r2 + r3) << 32);
 		random_math(r0, r1, r2, r3, ax0.m128i_u32[0], ax0.m128i_u32[2], bx0.m128i_u32[0], bx1.m128i_u32[0], bx1.m128i_u32[2]);
+        al0 ^= r2 | ((uint64_t)(r3) << 32);
+        ah0 ^= r0 | ((uint64_t)(r1) << 32);
 #endif
 
 		lo = _umul128(idx0, cl, &hi);
 
-		{
-			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l0[idx1 ^ 0x10]), _mm_set_epi64x(lo, hi));
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x20]);
-			hi ^= ((uint64_t*)&l0[idx1 ^ 0x20])[0];
-			lo ^= ((uint64_t*)&l0[idx1 ^ 0x20])[1];
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x30]);
-			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x10], _mm_add_epi64(chunk3, bx1));
-			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x20], _mm_add_epi64(chunk1, bx0));
-			_mm_store_si128((__m128i *)&l0[idx1 ^ 0x30], _mm_add_epi64(chunk2, ax0));
-		}
+        {
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x10]);
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x20]);
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[idx1 ^ 0x30]);
+            _mm_store_si128((__m128i *)&l0[idx1 ^ 0x10], _mm_add_epi64(chunk3, bx1));
+            _mm_store_si128((__m128i *)&l0[idx1 ^ 0x20], _mm_add_epi64(chunk1, bx0));
+            _mm_store_si128((__m128i *)&l0[idx1 ^ 0x30], _mm_add_epi64(chunk2, ax0));
+            cx = _mm_xor_si128(_mm_xor_si128(cx, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
-		uint64_t al0 = ax0.m128i_u64[0] + hi;
-		uint64_t ah0 = ax0.m128i_u64[1] + lo;
+		al0 += hi;
+		ah0 += lo;
 		((uint64_t*)&l0[idx1])[0] = al0;
 		((uint64_t*)&l0[idx1])[1] = ah0;
 		ah0 ^= ch;
@@ -411,15 +434,16 @@ void CryptonightR_double(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 		const __m128i ax0 = _mm_set_epi64x(axh0, axl0);
 		cx0 = _mm_aesenc_si128(cx0, ax0);
 
-		{
-			uint32_t k = idx01 ^ 0x10;
-			const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[k]); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
-		}
+        {
+            uint32_t k = idx01 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
+            cx0 = _mm_xor_si128(_mm_xor_si128(cx0, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		_mm_store_si128((__m128i *)&l0[idx01], _mm_xor_si128(bx00, cx0));
 
@@ -430,15 +454,16 @@ void CryptonightR_double(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 		const __m128i ax1 = _mm_set_epi64x(axh1, axl1);
 		cx1 = _mm_aesenc_si128(cx1, ax1);
 
-		{
-			uint32_t k = idx11 ^ 0x10;
-			const __m128i chunk1 = _mm_load_si128((__m128i *)&l1[k]); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
-		}
+        {
+            uint32_t k = idx11 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l1[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
+            cx1 = _mm_xor_si128(_mm_xor_si128(cx1, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		_mm_store_si128((__m128i *)&l1[idx11], _mm_xor_si128(bx10, cx1));
 
@@ -452,24 +477,27 @@ void CryptonightR_double(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 #if RANDOM_MATH_64_BIT == 1
 		cl ^= (r00 + r01) ^ (r02 + r03);
 		random_math(r00, r01, r02, r03, ax0.m128i_u64[0], ax0.m128i_u64[1], bx00.m128i_u64[0], bx01.m128i_u64[0], bx01.m128i_u64[1]);
+        axl0 ^= r02 ^ r03;
+        axh0 ^= r00 ^ r01;
 #else
 		cl ^= (r00 + r01) | (static_cast<uint64_t>(r02 + r03) << 32);
 		random_math(r00, r01, r02, r03, ax0.m128i_u32[0], ax0.m128i_u32[2], bx00.m128i_u32[0], bx01.m128i_u32[0], bx01.m128i_u32[2]);
+        axl0 ^= r02 | ((uint64_t)(r03) << 32);
+        axh0 ^= r00 | ((uint64_t)(r01) << 32);
 #endif
 
 		lo = _umul128(idx00, cl, &hi);
 
-		{
-			uint32_t k = idx01 ^ 0x10;
-			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l0[k]), _mm_set_epi64x(lo, hi)); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
-			hi ^= ((uint64_t*)&l0[k])[0];
-			lo ^= ((uint64_t*)&l0[k])[1];
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
-		}
+        {
+            uint32_t k = idx01 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
+            cx0 = _mm_xor_si128(_mm_xor_si128(cx0, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		axl0 += hi;
 		axh0 += lo;
@@ -486,24 +514,27 @@ void CryptonightR_double(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 #if RANDOM_MATH_64_BIT == 1
 		cl ^= (r10 + r11) ^ (r12 + r13);
 		random_math(r10, r11, r12, r13, ax1.m128i_u64[0], ax1.m128i_u64[1], bx10.m128i_u64[0], bx11.m128i_u64[0], bx11.m128i_u64[1]);
+        axl1 ^= r12 ^ r13;
+        axh1 ^= r10 ^ r11;
 #else
 		cl ^= (r10 + r11) | (static_cast<uint64_t>(r12 + r13) << 32);
 		random_math(r10, r11, r12, r13, ax1.m128i_u32[0], ax1.m128i_u32[2], bx10.m128i_u32[0], bx11.m128i_u32[0], bx11.m128i_u32[2]);
+        axl1 ^= r12 | ((uint64_t)(r13) << 32);
+        axh1 ^= r10 | ((uint64_t)(r11) << 32);
 #endif
 
 		lo = _umul128(idx10, cl, &hi);
 
-		{
-			uint32_t k = idx11 ^ 0x10;
-			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l1[k]), _mm_set_epi64x(lo, hi)); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
-			hi ^= ((uint64_t*)&l1[k])[0];
-			lo ^= ((uint64_t*)&l1[k])[1];
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
-		}
+        {
+            uint32_t k = idx11 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l1[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
+            cx1 = _mm_xor_si128(_mm_xor_si128(cx1, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		axl1 += hi;
 		axh1 += lo;
@@ -559,15 +590,16 @@ void CryptonightR_double_SSE(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 		const __m128i ax0 = _mm_set_epi64x(axh0, axl0);
 		cx0 = _mm_aesenc_si128(cx0, ax0);
 
-		{
-			uint32_t k = idx01 ^ 0x10;
-			const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[k]); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
-		}
+        {
+            uint32_t k = idx01 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
+            cx0 = _mm_xor_si128(_mm_xor_si128(cx0, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		_mm_store_si128((__m128i *)&l0[idx01], _mm_xor_si128(bx00, cx0));
 
@@ -578,15 +610,16 @@ void CryptonightR_double_SSE(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 		const __m128i ax1 = _mm_set_epi64x(axh1, axl1);
 		cx1 = _mm_aesenc_si128(cx1, ax1);
 
-		{
-			uint32_t k = idx11 ^ 0x10;
-			const __m128i chunk1 = _mm_load_si128((__m128i *)&l1[k]); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
-		}
+        {
+            uint32_t k = idx11 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l1[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
+            cx1 = _mm_xor_si128(_mm_xor_si128(cx1, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		_mm_store_si128((__m128i *)&l1[idx11], _mm_xor_si128(bx10, cx1));
 
@@ -606,21 +639,24 @@ void CryptonightR_double_SSE(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 			const __m128i r7 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(bx01), _mm_castsi128_ps(bx11)));
 			const __m128i r8 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_srli_si128(bx01, 8)), _mm_castsi128_ps(_mm_srli_si128(bx11, 8))));
 			random_math_double(r0, r1, r2, r3, r4, r5, r6, r7, r8);
-		}
+            axl0 ^= r2.m128i_u32[0] | ((uint64_t)(r3.m128i_u32[0]) << 32);
+            axh0 ^= r0.m128i_u32[0] | ((uint64_t)(r1.m128i_u32[0]) << 32);
+            axl1 ^= r2.m128i_u32[2] | ((uint64_t)(r3.m128i_u32[2]) << 32);
+            axh1 ^= r0.m128i_u32[2] | ((uint64_t)(r1.m128i_u32[2]) << 32);
+        }
 
 		lo = _umul128(idx00, cl, &hi);
 
-		{
-			uint32_t k = idx01 ^ 0x10;
-			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l0[k]), _mm_set_epi64x(lo, hi)); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
-			hi ^= ((uint64_t*)&l0[k])[0];
-			lo ^= ((uint64_t*)&l0[k])[1];
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
-		}
+        {
+            uint32_t k = idx01 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l0[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk1, bx00)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l0[k]);
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk2, ax0)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l0[k], _mm_add_epi64(chunk3, bx01));
+            cx0 = _mm_xor_si128(_mm_xor_si128(cx0, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		axl0 += hi;
 		axh0 += lo;
@@ -638,17 +674,16 @@ void CryptonightR_double_SSE(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1)
 
 		lo = _umul128(idx10, cl, &hi);
 
-		{
-			uint32_t k = idx11 ^ 0x10;
-			const __m128i chunk1 = _mm_xor_si128(_mm_load_si128((__m128i *)&l1[k]), _mm_set_epi64x(lo, hi)); k ^= 0x30;
-			const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
-			hi ^= ((uint64_t*)&l1[k])[0];
-			lo ^= ((uint64_t*)&l1[k])[1];
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
-			const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
-			_mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
-		}
+        {
+            uint32_t k = idx11 ^ 0x10;
+            const __m128i chunk1 = _mm_load_si128((__m128i *)&l1[k]); k ^= 0x30;
+            const __m128i chunk2 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk1, bx10)); k ^= 0x10;
+            const __m128i chunk3 = _mm_load_si128((__m128i *)&l1[k]);
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk2, ax1)); k ^= 0x20;
+            _mm_store_si128((__m128i *)&l1[k], _mm_add_epi64(chunk3, bx11));
+            cx1 = _mm_xor_si128(_mm_xor_si128(cx1, chunk3), _mm_xor_si128(chunk1, chunk2));
+        }
 
 		axl1 += hi;
 		axh1 += lo;
