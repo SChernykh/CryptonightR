@@ -28,7 +28,7 @@ Reference implementation (variant4 code in the following files):
 - https://github.com/SChernykh/slow_hash_test/blob/CryptonightR/slow-hash.c
 
 Reference implementation in Monero code base:
-- https://github.com/SChernykh/monero/tree/variant4-pr
+- https://github.com/moneromooo-monero/bitmonero/tree/magic-beans-0.14
 
 An example of generated random math:
 - https://github.com/SChernykh/CryptonightR/blob/master/CryptonightR/random_math.inl
