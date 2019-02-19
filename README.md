@@ -45,6 +45,8 @@ Pool software:
 - [node-cryptonight-hashing](https://github.com/SChernykh/node-cryptonight-hashing/tree/CryptonightR)
 - [nodejs-pool example](https://github.com/wowario/nodejs-pool)
 
+**NOTE for pool operators: you'll have to pass active block height with each miner job and use correct height when checking submitted shares, don't forget that stale shares use older block height**
+
 **Test pools:**
 - https://testnet.wowne.ro/
 
