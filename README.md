@@ -41,7 +41,7 @@ Optimized GPU miner:
 - [xmrig-nvidia](https://github.com/SChernykh/xmrig-nvidia/tree/CryptonightR)
 
 Pool software:
-- [node-multi-hashing](https://github.com/SChernykh/node-multi-hashing)
+- [node-multi-hashing](https://github.com/SChernykh/node-multi-hashing/tree/feature-cryptonight_r)
 - [node-cryptonight-hashing](https://github.com/SChernykh/node-cryptonight-hashing/tree/CryptonightR)
 - [nodejs-pool example](https://github.com/wowario/nodejs-pool)
 
