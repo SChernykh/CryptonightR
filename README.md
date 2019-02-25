@@ -42,7 +42,7 @@ Optimized GPU miner:
 
 Pool software:
 - [node-multi-hashing](https://github.com/SChernykh/node-multi-hashing/tree/feature-cryptonight_r)
-- [node-cryptonight-hashing](https://github.com/SChernykh/node-cryptonight-hashing/tree/CryptonightR)
+- [node-cryptonight-hashing](https://github.com/MoneroOcean/node-cryptonight-hashing)
 - [nodejs-pool example](https://github.com/wowario/nodejs-pool)
 
 **NOTE for pool operators: you'll have to pass active block height with each miner job and use correct height when checking submitted shares, don't forget that stale shares use older block height**
