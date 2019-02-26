@@ -34,11 +34,11 @@ An example of generated random math:
 - https://github.com/SChernykh/CryptonightR/blob/master/CryptonightR/random_math.inl
 
 Optimized CPU miner:
-- [xmrig](https://github.com/SChernykh/xmrig/tree/CryptonightR)
+- [xmrig](https://github.com/xmrig/xmrig)
 
 Optimized GPU miner:
-- [xmrig-amd](https://github.com/SChernykh/xmrig-amd/tree/CryptonightR)
-- [xmrig-nvidia](https://github.com/SChernykh/xmrig-nvidia/tree/CryptonightR)
+- [xmrig-amd](https://github.com/xmrig/xmrig-amd)
+- [xmrig-nvidia](https://github.com/xmrig/xmrig-nvidia)
 
 Pool software:
 - [node-multi-hashing](https://github.com/zone117x/node-multi-hashing)
